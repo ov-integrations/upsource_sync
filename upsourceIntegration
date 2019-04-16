@@ -2,15 +2,6 @@ import requests
 from requests.auth import HTTPBasicAuth
 import json
 
-urlUpsource = 'url upsource'
-loginUpsource = 'login upsource'
-passUpsource = 'password upsource'
-
-urlOnevizion = 'url onevizion'
-loginOnevizion = 'login onevizion'
-passOnevizion = 'password onevizion'
-projectName = 'project name'
-
 authUpsource = HTTPBasicAuth(loginUpsource, passUpsource)
 authOnevizion = HTTPBasicAuth(loginOnevizion, passOnevizion)
 headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
