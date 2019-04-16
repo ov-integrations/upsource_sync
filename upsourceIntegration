@@ -16,7 +16,7 @@ def reviewInfo():
         readble_json = response['result']['reviewInfo']
         if readble_json == [{}]:
             for issueTitle in checkIssue(getIssueTitle(revisionId['revisionCommitMessage'])):
-                if issueTitle['IS_ISSUE_STATUS'] == 'Ready for Review':
+                if issueTitle['VQS_IT_STATUS'] == 'Ready for Review':
                    createReview(revisionId['revisionId'])
         elif readble_json is not None:
             for issues in readble_json:
@@ -49,8 +49,8 @@ def getIssueTitle(issueTitle):
 
 #Checks issue status
 def checkIssue(issue):
-    url = urlOnevizion + 'api/v3/trackor_types/Issues_Tracker/trackors'
-    params = {"fields":"IS_ISSUE_STATUS, XITOR_KEY", "XITOR_KEY":issue}
+    url = urlOnevizion + 'api/v3/trackor_types/Issue/trackors'
+    params = {"fields":"VQS_IT_STATUS, XITOR_KEY", "XITOR_KEY":issue}
     answer = requests.get(url, headers=headers, params=params, auth=authOnevizion)
     response = answer.json()
     return response
@@ -83,12 +83,12 @@ def checkStatus(issue, status, branch):
 #Updates issue status if review status = 2 (closed)
 def updateIssue(issue, status):
     for issueTitle in checkIssue(issue):
-        if issueTitle['IS_ISSUE_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
+        if issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
             data = {"IS_ISSUE_STATUS":status}
             url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
             answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
         elif issueTitle['IS_ISSUE_STATUS'] == 'Ready for Review' and status == 'Ready for Test':
-            data = {"IS_ISSUE_STATUS":status}
+            data = {"VQS_IT_STATUS":status}
             url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
             answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
 
