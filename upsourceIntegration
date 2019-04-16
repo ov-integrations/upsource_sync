@@ -84,10 +84,10 @@ def checkStatus(issue, status, branch):
 def updateIssue(issue, status):
     for issueTitle in checkIssue(issue):
         if issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
-            data = {"IS_ISSUE_STATUS":status}
+            data = {"VQS_IT_STATUS":status}
             url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
             answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
-        elif issueTitle['IS_ISSUE_STATUS'] == 'Ready for Review' and status == 'Ready for Test':
+        elif issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Test':
             data = {"VQS_IT_STATUS":status}
             url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
             answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
