@@ -1,3 +1,8 @@
-UN=
-PWD=
-URL=
+urlUpsource = 'url upsource'
+projectName = 'upsource project name'
+loginUpsource = 'login upsource'
+passUpsource = 'password upsource'
+
+urlOnevizion = 'url onevizion'
+loginOnevizion = 'login onevizion'
+passOnevizion = 'password onevizion'
