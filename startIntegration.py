@@ -1,4 +1,4 @@
-import integration
+import upsourceIntegration
 import json
 
 with open('SettingsFileTemplate.integration.json', "rb") as PFile:
@@ -12,5 +12,6 @@ urlOnevizion = passwordData["urlOnevizion"]
 loginOnevizion = passwordData["loginOnevizion"]
 passOnevizion = passwordData["passOnevizion"]
 projectName = passwordData["projectName"]
+projectOnevizion = passwordData["projectOnevizion"]
 
-integration.integration(urlUpsource=urlUpsource, loginUpsource=loginUpsource, passUpsource=passUpsource, urlOnevizion=urlOnevizion, loginOnevizion=loginOnevizion, passOnevizion=passOnevizion, projectName=projectName)
+upsourceIntegration.integration(urlUpsource=urlUpsource, loginUpsource=loginUpsource, passUpsource=passUpsource, urlOnevizion=urlOnevizion, loginOnevizion=loginOnevizion, passOnevizion=passOnevizion, projectName=projectName, projectOnevizion=projectOnevizion)
