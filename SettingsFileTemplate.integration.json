@@ -1,10 +1,11 @@
 {
 "urlUpsource" : "url upsource",
-"projectName" : "upsource project name",
 "loginUpsource" : "login upsource",
 "passUpsource" : "password upsource",
+"projectName" : "upsource project name",
 
 "urlOnevizion" : "url onevizion",
 "loginOnevizion" : "login onevizion",
-"passOnevizion" : "password onevizion"
+"passOnevizion" : "password onevizion",
+"projectOnevizion" : "blank"
 }
