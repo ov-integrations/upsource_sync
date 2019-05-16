@@ -97,22 +97,21 @@ class integration(object):
             params = {"fields":"XITOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "VQS_IT_STATUS":'Ready for Review', "Product.TRACKOR_KEY":projectOnevizion}
             answer = requests.get(url, headers=headers, params=params, auth=authOnevizion)
             response = answer.json()
-            if response == []:
-                return None
-            else: return response['XITOR_KEY']
+            return response
         else:
             url = urlOnevizion + 'api/v3/trackor_types/Issue/trackors'
             params = {"fields":"XITOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "XITOR_KEY":issue, "Product.TRACKOR_KEY":projectOnevizion}
             answer = requests.get(url, headers=headers, params=params, auth=authOnevizion)
-            return answer
+            response = answer.json()
+            return response
 
     #Creates review if issue status = 'Ready for Review'
     def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
         for issue in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, ''):
-            if issue == 'None':
-                print('No issues for which need to create a review')
-            else:
-                 for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue):
+            if issue == []:
+                print('For this issue don\'t need to create a review')
+            else: 
+                for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue['XITOR_KEY']):
                     url = urlUpsource + '~rpc/getRevisionReviewInfo'
                     data = {"projectId":projectName, "revisionId":revisionId['revisionId']}
                     answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
