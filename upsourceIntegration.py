@@ -15,13 +15,13 @@ class integration(object):
         self.passOnevizion = passOnevizion
         self.projectName = projectName
         self.projectOnevizion = projectOnevizion
-
+        
         authUpsource = HTTPBasicAuth(loginUpsource, passUpsource)
         authOnevizion = HTTPBasicAuth(loginOnevizion, passOnevizion)
         headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
         self.reviewInfo(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers)
         self.createReview(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers)
-                
+        
     #Returns short review information for a set of revisions
     def reviewInfo(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
         for revisionId in self.revisionList(urlUpsource, authUpsource, projectName, headers):
@@ -107,8 +107,8 @@ class integration(object):
 
     #Creates review if issue status = 'Ready for Review'
     def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
+        log = self.get_logger()
         for issue in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, ''):
-            log = self.get_logger()
             try:
                 issue == issue['XITOR_KEY']
             except Exception:
@@ -143,7 +143,7 @@ class integration(object):
     def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):
         log = logging.getLogger(name)
         log.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')
+        formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')        
         sh = logging.StreamHandler(stream=sys.stdout)
         sh.setFormatter(formatter)
         log.addHandler(sh)
