@@ -113,6 +113,7 @@ class integration(object):
             try:
                 issue == issue['XITOR_KEY']
             except Exception:
+                log.debug('No issues for which need to create a review')
                 self.addLog(processId, urlOnevizion, authOnevizion, headers, logLevel='Info', message='No issues for which need to create a review', description='msg3')
             else:
                 for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue):
@@ -124,7 +125,6 @@ class integration(object):
                     try:
                         readble_json is None
                     except Exception:
-                        log.debug('No issues for which need to create a review')
                         self.addLog(processId, urlOnevizion, authOnevizion, headers, logLevel='Info', message='Review already exists', description='msg4')
                     else:
                         url = urlUpsource + '~rpc/createReview'
@@ -142,11 +142,10 @@ class integration(object):
         return readble_json
 
     #Returns logging to stdout
-    def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):       
+    def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):
         log = logging.getLogger(name)
         log.setLevel(logging.DEBUG)
         formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')
-
         sh = logging.StreamHandler(stream=sys.stdout)
         sh.setFormatter(formatter)
         log.addHandler(sh)
