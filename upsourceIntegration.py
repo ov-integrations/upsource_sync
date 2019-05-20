@@ -135,7 +135,7 @@ class integration(object):
                         url = urlUpsource + '~rpc/createReview'
                         data = {"projectId":projectName, "revisions":revisionId['revisionId']}
                         answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
-                        log.info('Review for ' + issue + ' created')
+                        log.info('Review for ' + str(issue) + ' created')
         log.info('Finished creating reviews')
         log.info('Finished upsource integration')
 
