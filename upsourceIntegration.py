@@ -19,14 +19,14 @@ class integration(object):
         authUpsource = HTTPBasicAuth(loginUpsource, passUpsource)
         authOnevizion = HTTPBasicAuth(loginOnevizion, passOnevizion)
         headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
-        self.reviewInfo(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers)
+        #self.reviewInfo(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers)
         self.createReview(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers)
         
     #Returns short review information for a set of revisions
     def reviewInfo(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
         log = self.get_logger()
-        log.debug('Upsource integration started')
-        log.debug('Issues statuses updation started')
+        log.debug('Started upsource integration')
+        log.debug('Started updating the status of issues')
         for revisionId in self.revisionList(urlUpsource, authUpsource, projectName, headers):
             url = urlUpsource + '~rpc/getRevisionReviewInfo'
             data = {"projectId":projectName, "revisionId":revisionId['revisionId']}
@@ -41,7 +41,7 @@ class integration(object):
                         iss = issues
                         issueTitle = iss['reviewInfo']['title']
                         self.checkStatus(urlOnevizion, authOnevizion, projectOnevizion, headers, self.getIssueTitle(issueTitle), iss['reviewInfo']['state'], self.revisionBranche(urlUpsource, authUpsource, projectName, headers, revisionId['revisionId']))
-        log.debug('Issues statuses updation finished')
+        log.debug('Finished updating the status of issues')
 
     #Returns the list of revisions in a given project
     def revisionList(self, urlUpsource, authUpsource, projectName, headers):
@@ -106,26 +106,24 @@ class integration(object):
     def checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
         if issue == '':
             url = urlOnevizion + 'api/v3/trackor_types/Issue/trackors'
-            params = {"fields":"XITOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "VQS_IT_STATUS":"Ready for Review", "Product.TRACKOR_KEY":projectOnevizion}
+            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "VQS_IT_STATUS":"Ready for Review", "Product.TRACKOR_KEY":projectOnevizion}
             answer = requests.get(url, headers=headers, params=params, auth=authOnevizion)
             return answer
         else:
             url = urlOnevizion + 'api/v3/trackor_types/Issue/trackors'
-            params = {"fields":"XITOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "XITOR_KEY":issue, "Product.TRACKOR_KEY":projectOnevizion}
+            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "TRACKOR_KEY":issue, "Product.TRACKOR_KEY":projectOnevizion}
             answer = requests.get(url, headers=headers, params=params, auth=authOnevizion)
             return answer
 
     #Creates review if issue status = 'Ready for Review'
     def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
         log = self.get_logger()
-        log.debug('Reviews creation started')
+        log.debug('Started creating reviews')
         for issue in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, ''):
-            try:
-                issue == issue['XITOR_KEY']
-            except Exception:
-                log.debug('Not need to create a review for this issue - ' + str(issue))
+            if issue == b'[]':
+                log.debug('No need to create a review for this issue - ' + str(issue))
             else:
-                for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue):
+                for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue['TRACKOR_KEY']):
                     url = urlUpsource + '~rpc/getRevisionReviewInfo'
                     data = {"projectId":projectName, "revisionId":revisionId['revisionId']}
                     answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
@@ -138,8 +136,8 @@ class integration(object):
                         data = {"projectId":projectName, "revisions":revisionId['revisionId']}
                         answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
                         log.debug('Review for ' + issue + ' created')
-        log.debug('Reviews creation finished')
-        log.debug('Upsource integration finished')
+        log.debug('Finished creating reviews')
+        log.debug('Finished upsource integration')
 
     #Returns the list of revisions that match the given search query
     def filteredRevisionList(self, authUpsource, urlUpsource, projectName, headers, issue):
