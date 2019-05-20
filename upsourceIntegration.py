@@ -106,7 +106,7 @@ class integration(object):
     def checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
         if issue == '':
             url = urlOnevizion + 'api/v3/trackor_types/Issue/trackors'
-            params = {"fields":"XITOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "VQS_IT_STATUS":'Ready for Review', "Product.TRACKOR_KEY":projectOnevizion}
+            params = {"fields":"XITOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "VQS_IT_STATUS":"Ready for Review", "Product.TRACKOR_KEY":projectOnevizion}
             answer = requests.get(url, headers=headers, params=params, auth=authOnevizion)
             return answer
         else:
