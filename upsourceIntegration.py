@@ -25,18 +25,23 @@ class integration(object):
     #Returns short review information for a set of revisions
     def reviewInfo(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
         log = self.get_logger()
+        log.debug('Upsource integration started')
+        log.debug('Issues statuses updation started')
         for revisionId in self.revisionList(urlUpsource, authUpsource, projectName, headers):
             url = urlUpsource + '~rpc/getRevisionReviewInfo'
             data = {"projectId":projectName, "revisionId":revisionId['revisionId']}
             answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
             response = answer.json()
             readble_json = response['result']['reviewInfo']
-            if readble_json is not None:
+            if readble_json == [{}]:
+                log.debug('This revision has no review')
+            else:
                 for issues in readble_json:
                     for iss in issues:
                         iss = issues
                         issueTitle = iss['reviewInfo']['title']
                         self.checkStatus(urlOnevizion, authOnevizion, projectOnevizion, headers, self.getIssueTitle(issueTitle), iss['reviewInfo']['state'], self.revisionBranche(urlUpsource, authUpsource, projectName, headers, revisionId['revisionId']))
+        log.debug('Issues statuses updation finished')
 
     #Returns the list of revisions in a given project
     def revisionList(self, urlUpsource, authUpsource, projectName, headers):
@@ -71,6 +76,7 @@ class integration(object):
     
     #Checks review status and run updateIssue
     def checkStatus(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, status, branch):
+        log = self.get_logger()
         if issue == 'None':
             return None
         else:
@@ -78,6 +84,7 @@ class integration(object):
                 self.updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, 'Ready for Merge')
             elif status == '2' and branch != 'master':
                 self.updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, 'Ready for Test')
+            else: log.debug('Review ' + str(issue) + ' is not yet closed')
 
     #Updates issue status if review status = 2 (closed)
     def updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, status):
@@ -93,6 +100,7 @@ class integration(object):
                 url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
                 answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
                 log.debug('Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Test"')
+            else: log.debug('Issue ' + issueTitle['XITOR_ID'] + ' has already been updated')
 
     #Checks issue status
     def checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
@@ -110,6 +118,7 @@ class integration(object):
     #Creates review if issue status = 'Ready for Review'
     def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
         log = self.get_logger()
+        log.debug('Reviews creation started')
         for issue in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, ''):
             try:
                 issue == issue['XITOR_KEY']
@@ -122,15 +131,15 @@ class integration(object):
                     answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
                     response = answer.json()
                     readble_json = response['result']['reviewInfo']
-                    try:
-                        readble_json is None
-                    except Exception:
+                    if readble_json is not None:
                         log.debug('Review already exists')
                     else:
                         url = urlUpsource + '~rpc/createReview'
                         data = {"projectId":projectName, "revisions":revisionId['revisionId']}
                         answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
                         log.debug('Review for ' + issue + ' created')
+        log.debug('Reviews creation finished')
+        log.debug('Upsource integration finished')
 
     #Returns the list of revisions that match the given search query
     def filteredRevisionList(self, authUpsource, urlUpsource, projectName, headers, issue):
@@ -145,7 +154,7 @@ class integration(object):
     def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):
         log = logging.getLogger(name)
         log.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')        
+        formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')
         sh = logging.StreamHandler(stream=sys.stdout)
         sh.setFormatter(formatter)
         log.addHandler(sh)
