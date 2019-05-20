@@ -2,6 +2,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 import json
 import logging
+from logging import FileHandler
 import sys
 
 class integration(object):
