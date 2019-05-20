@@ -14,7 +14,4 @@ passOnevizion = passwordData["passOnevizion"]
 projectName = passwordData["projectName"]
 projectOnevizion = passwordData["projectOnevizion"]
 
-with open('ihub_process_id', "rb") as PFile:
-    processId = PFile.read().decode('utf-8')
-
-upsourceIntegration.integration(urlUpsource=urlUpsource, loginUpsource=loginUpsource, passUpsource=passUpsource, urlOnevizion=urlOnevizion, loginOnevizion=loginOnevizion, passOnevizion=passOnevizion, projectName=projectName, projectOnevizion=projectOnevizion, processId=processId)
+upsourceIntegration.integration(urlUpsource=urlUpsource, loginUpsource=loginUpsource, passUpsource=passUpsource, urlOnevizion=urlOnevizion, loginOnevizion=loginOnevizion, passOnevizion=passOnevizion, projectName=projectName, projectOnevizion=projectOnevizion)
