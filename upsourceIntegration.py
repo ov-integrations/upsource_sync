@@ -123,7 +123,7 @@ class integration(object):
             try:
                 issue == issue['XITOR_KEY']
             except Exception:
-                log.debug('Not need to create a review for this issue')
+                log.debug('Not need to create a review for this issue - ' + str(issue))
             else:
                 for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue):
                     url = urlUpsource + '~rpc/getRevisionReviewInfo'
