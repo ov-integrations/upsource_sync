@@ -1,9 +1,6 @@
 import requests
 from requests.auth import HTTPBasicAuth
 import json
-import logging
-from logging import FileHandler
-import sys
 
 class integration(object):
 
@@ -21,11 +18,11 @@ class integration(object):
         authUpsource = HTTPBasicAuth(loginUpsource, passUpsource)
         authOnevizion = HTTPBasicAuth(loginOnevizion, passOnevizion)
         headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
-        self.reviewInfo(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers)
-        self.createReview(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, processId, headers)
+        self.reviewInfo(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers, processId)
+        self.createReview(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers, processId)
                 
     #Returns short review information for a set of revisions
-    def reviewInfo(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
+    def reviewInfo(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers, processId):
         for revisionId in self.revisionList(urlUpsource, authUpsource, projectName, headers):
             url = urlUpsource + '~rpc/getRevisionReviewInfo'
             data = {"projectId":projectName, "revisionId":revisionId['revisionId']}
@@ -37,7 +34,7 @@ class integration(object):
                     for iss in issues:
                         iss = issues
                         issueTitle = iss['reviewInfo']['title']
-                        self.checkStatus(urlOnevizion, authOnevizion, projectOnevizion, headers, self.getIssueTitle(issueTitle), iss['reviewInfo']['state'], self.revisionBranche(urlUpsource, authUpsource, projectName, headers, revisionId['revisionId']))
+                        self.checkStatus(urlOnevizion, authOnevizion, projectOnevizion, headers, processId, self.getIssueTitle(issueTitle), iss['reviewInfo']['state'], self.revisionBranche(urlUpsource, authUpsource, projectName, headers, revisionId['revisionId']))
 
     #Returns the list of revisions in a given project
     def revisionList(self, urlUpsource, authUpsource, projectName, headers):
@@ -71,29 +68,28 @@ class integration(object):
         return readble_json
     
     #Checks review status and run updateIssue
-    def checkStatus(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, status, branch):
+    def checkStatus(self, urlOnevizion, authOnevizion, projectOnevizion, headers, processId, issue, status, branch):
         if issue == 'None':
             return None
         else:
             if status == '2' and branch == 'master':
-                self.updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, 'Ready for Merge')
+                self.updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, processId, issue, 'Ready for Merge')
             elif status == '2' and branch != 'master':
-                self.updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, 'Ready for Test')
+                self.updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, processId, issue, 'Ready for Test')
 
     #Updates issue status if review status = 2 (closed)
-    def updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, status):
-        log = self.get_logger()
+    def updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, processId, issue, status):
         for issueTitle in self.checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
             if issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
                 data = {"VQS_IT_STATUS":status}
                 url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
                 answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
-                log.debug('Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Merge"')
+                self.addLog(processId, urlOnevizion, authOnevizion, headers, logLevel='Info', message='Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Merge"', description='msg1')
             elif issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Test':
                 data = {"VQS_IT_STATUS":status}
                 url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
                 answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
-                log.debug('Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Test"')
+                self.addLog(processId, urlOnevizion, authOnevizion, headers, logLevel='Info', message='Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Test"', description='msg2')
 
     #Checks issue status
     def checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
@@ -109,14 +105,12 @@ class integration(object):
             return answer
 
     #Creates review if issue status = 'Ready for Review'
-    def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, processId, headers):
-        log = self.get_logger()
+    def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers, processId):
         for issue in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, ''):
             try:
                 issue == issue['XITOR_KEY']
             except Exception:
-                log.debug('No issues for which need to create a review')
-                self.addLog(processId, urlOnevizion, authOnevizion, headers, logLevel='Info', message='No issues for which need to create a review', description='Test1')
+                self.addLog(processId, urlOnevizion, authOnevizion, headers, logLevel='Info', message='No issues for which need to create a review', description='msg3')
             else:
                 for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue):
                     url = urlUpsource + '~rpc/getRevisionReviewInfo'
@@ -127,12 +121,12 @@ class integration(object):
                     try:
                         readble_json is None
                     except Exception:
-                        log.debug('Review already exists')
+                        self.addLog(processId, urlOnevizion, authOnevizion, headers, logLevel='Info', message='Review already exists', description='msg4')
                     else:
                         url = urlUpsource + '~rpc/createReview'
                         data = {"projectId":projectName, "revisions":revisionId['revisionId']}
                         answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
-                        log.debug('Review for ' + issue + ' created')
+                        self.addLog(processId, urlOnevizion, authOnevizion, headers, logLevel='Info', message='Review for ' + issue + ' created', description='msg5')
 
     #Returns the list of revisions that match the given search query
     def filteredRevisionList(self, authUpsource, urlUpsource, projectName, headers, issue):
@@ -144,23 +138,8 @@ class integration(object):
         return readble_json
 
     #Returns logging to stdout
-    def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):
-        print(5, flush = True)            
-        log = logging.getLogger(name)
-        log.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')
-
-        fh = FileHandler(file, encoding=encoding)
-        fh.setFormatter(formatter)
-        log.addHandler(fh)
-        
-        sh = logging.StreamHandler(stream=sys.stdout)
-        sh.setFormatter(formatter)
-        log.addHandler(sh)
-        return log
-
     def addLog(self, processId, urlOnevizion, authOnevizion, headers, logLevel, message, description):
         url = urlOnevizion + '/api/v3/integrations/runs/logs/' + str(processId) + "/logs"
-        data = {'message': message, 'description': description, 'log_level_name': logLevel}
+        data = {"message":message, "description":description, "log_level_name":logLevel}
         answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authOnevizion)
         return answer
