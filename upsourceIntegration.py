@@ -7,7 +7,7 @@ import sys
 
 class integration(object):
 
-    def __init__(self, urlUpsource="", loginUpsource="", passUpsource="", urlOnevizion="", loginOnevizion="", passOnevizion="", projectName="", projectOnevizion=""):
+    def __init__(self, urlUpsource="", loginUpsource="", passUpsource="", urlOnevizion="", loginOnevizion="", passOnevizion="", projectName="", projectOnevizion="", processId=""):
         self.urlUpsource = urlUpsource
         self.loginUpsource = loginUpsource
         self.passUpsource = passUpsource
@@ -16,13 +16,14 @@ class integration(object):
         self.passOnevizion = passOnevizion
         self.projectName = projectName
         self.projectOnevizion = projectOnevizion
+        self.processId = processId
 
         authUpsource = HTTPBasicAuth(loginUpsource, passUpsource)
         authOnevizion = HTTPBasicAuth(loginOnevizion, passOnevizion)
         headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
         self.reviewInfo(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers)
-        self.createReview(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers)
-        
+        self.createReview(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, processId, headers)
+                
     #Returns short review information for a set of revisions
     def reviewInfo(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
         for revisionId in self.revisionList(urlUpsource, authUpsource, projectName, headers):
@@ -108,13 +109,14 @@ class integration(object):
             return answer
 
     #Creates review if issue status = 'Ready for Review'
-    def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
+    def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, processId, headers):
         log = self.get_logger()
         for issue in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, ''):
             try:
                 issue == issue['XITOR_KEY']
             except Exception:
                 log.debug('No issues for which need to create a review')
+                self.addLog(processId, urlOnevizion, authOnevizion, headers, logLevel='Info', message='No issues for which need to create a review', description='Test1')
             else:
                 for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue):
                     url = urlUpsource + '~rpc/getRevisionReviewInfo'
@@ -140,10 +142,10 @@ class integration(object):
         response = answer.json()
         readble_json = response['result']['revision']
         return readble_json
-    
+
     #Returns logging to stdout
     def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):
-        print(5, flush = True)
+        print(5, flush = True)            
         log = logging.getLogger(name)
         log.setLevel(logging.DEBUG)
         formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')
@@ -156,3 +158,9 @@ class integration(object):
         sh.setFormatter(formatter)
         log.addHandler(sh)
         return log
+
+    def addLog(self, processId, urlOnevizion, authOnevizion, headers, logLevel, message, description):
+        url = urlOnevizion + '/api/v3/integrations/runs/logs/' + str(processId) + "/logs"
+        data = {'message': message, 'description': description, 'log_level_name': logLevel}
+        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authOnevizion)
+        return answer
