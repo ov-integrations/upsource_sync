@@ -106,22 +106,24 @@ class integration(object):
     def checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
         if issue == '':
             url = urlOnevizion + 'api/v3/trackor_types/Issue/trackors'
-            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "VQS_IT_STATUS":"Ready for Review", "Product.TRACKOR_KEY":projectOnevizion}
+            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "Product.TRACKOR_KEY":projectOnevizion}
             answer = requests.get(url, headers=headers, params=params, auth=authOnevizion)
-            return answer
+            response = answer.json()
+            return response
         else:
             url = urlOnevizion + 'api/v3/trackor_types/Issue/trackors'
             params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "TRACKOR_KEY":issue, "Product.TRACKOR_KEY":projectOnevizion}
             answer = requests.get(url, headers=headers, params=params, auth=authOnevizion)
-            return answer
+            response = answer.json()
+            return response
 
     #Creates review if issue status = 'Ready for Review'
     def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
         log = self.get_logger()
         log.info('Started creating reviews')
         for issue in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, ''):
-            if issue == b'[]':
-                log.info('No need to create a review for this issue - ' + str(issue))
+            if issue['VQS_IT_STATUS'] != "Ready for Review":
+                log.info('No need to create a review for this issue - ' + str(issue['TRACKOR_KEY']))
             else:
                 for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue['TRACKOR_KEY']):
                     url = urlUpsource + '~rpc/getRevisionReviewInfo'
@@ -129,13 +131,13 @@ class integration(object):
                     answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
                     response = answer.json()
                     readble_json = response['result']['reviewInfo']
-                    if readble_json is not None:
+                    if readble_json != [{}]:
                         log.info('Review already exists')
                     else:
                         url = urlUpsource + '~rpc/createReview'
                         data = {"projectId":projectName, "revisions":revisionId['revisionId']}
                         answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
-                        log.info('Review for ' + str(issue) + ' created')
+                        log.info('Review for ' + str(issue['TRACKOR_KEY']) + ' created')
         log.info('Finished creating reviews')
         log.info('Finished upsource integration')
 
