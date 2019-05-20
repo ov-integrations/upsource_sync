@@ -1,6 +1,8 @@
 import requests
 from requests.auth import HTTPBasicAuth
 import json
+import logging
+import sys
 
 class integration(object):
 
@@ -78,17 +80,18 @@ class integration(object):
 
     #Updates issue status if review status = 2 (closed)
     def updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, status):
+        log = self.get_logger()
         for issueTitle in self.checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
             if issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
                 data = {"VQS_IT_STATUS":status}
                 url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
                 answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
-                print('Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Merge"')
+                log.debug('Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Merge"')
             elif issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Test':
                 data = {"VQS_IT_STATUS":status}
                 url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
                 answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
-                print('Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Test"')
+                log.debug('Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Test"')
 
     #Checks issue status
     def checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
@@ -105,11 +108,12 @@ class integration(object):
 
     #Creates review if issue status = 'Ready for Review'
     def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
+        log = self.get_logger()
         for issue in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, ''):
             try:
                 issue == issue['XITOR_KEY']
             except Exception:
-                print('No issues for which need to create a review')
+                log.debug('No issues for which need to create a review')
             else:
                 for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue):
                     url = urlUpsource + '~rpc/getRevisionReviewInfo'
@@ -120,12 +124,12 @@ class integration(object):
                     try:
                         readble_json is None
                     except Exception:
-                        print('Review already exists')
+                        log.debug('Review already exists')
                     else:
                         url = urlUpsource + '~rpc/createReview'
                         data = {"projectId":projectName, "revisions":revisionId['revisionId']}
                         answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
-                        print('Review for ' + issue + ' created')
+                        log.debug('Review for ' + issue + ' created')
 
     #Returns the list of revisions that match the given search query
     def filteredRevisionList(self, authUpsource, urlUpsource, projectName, headers, issue):
@@ -135,3 +139,15 @@ class integration(object):
         response = answer.json()
         readble_json = response['result']['revision']
         return readble_json
+
+    def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):
+        log = logging.getLogger(name)
+        log.setLevel(logging.DEBUG)
+        # Будут строки вида: "[2017-08-23 09:54:55,356] main.py:34 DEBUG    foo"
+        formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')
+        #formatter = logging.Formatter('%(message)s')
+        # В stdout
+        sh = logging.StreamHandler(stream=sys.stdout)
+        sh.setFormatter(formatter)
+        log.addHandler(sh)
+        return log
