@@ -80,27 +80,27 @@ class integration(object):
         if issue == 'None':
             return None
         else:
-            if status == '2' and branch == 'master':
-                self.updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, 'Ready for Merge')
-            elif status == '2' and branch != 'master':
-                self.updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, 'Ready for Test')
+            if status == 2 and branch == 'master':
+                self.updateIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, issue, 'Ready for Merge')
+            elif status == 2 and branch != 'master':
+                self.updateIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, issue, 'Ready for Test')
             else: log.info('Review ' + str(issue) + ' is not yet closed')
 
     #Updates issue status if review status = 2 (closed)
     def updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, status):
         log = self.get_logger()
-        for issueTitle in self.checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
+        for issueTitle in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
             if issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
+                url = urlOnevizion + 'api/v3/trackors/' + str(issueTitle['TRACKOR_ID'])
                 data = {"VQS_IT_STATUS":status}
-                url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
-                answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
-                log.info('Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Merge"')
-            elif issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Test':
+                answer = requests.put(url, headers=headers, data=json.dumps(data), auth=authOnevizion)
+                log.info('Issue ' + issueTitle['TRACKOR_KEY'] + ' updated status to "Ready for Merge"')
+            elif issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == "Ready for Test":
+                url = urlOnevizion + 'api/v3/trackors/' + str(issueTitle['TRACKOR_ID'])
                 data = {"VQS_IT_STATUS":status}
-                url = urlOnevizion + 'api/v3/trackors/' + issueTitle['XITOR_ID']
-                answer = requests.post(url, headers=headers, data=data, auth=authOnevizion)
-                log.info('Issue ' + issueTitle['XITOR_ID'] + ' updated status to "Ready for Test"')
-            else: log.info('Issue ' + issueTitle['XITOR_ID'] + ' has already been updated')
+                answer = requests.put(url, headers=headers, data=json.dumps(data), auth=authOnevizion)
+                log.info('Issue ' + issueTitle['TRACKOR_KEY'] + ' updated status to "Ready for Test"')
+            else: log.info('Issue ' + issueTitle['TRACKOR_KEY'] + ' has already been updated')
 
     #Checks issue status
     def checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
