@@ -139,14 +139,12 @@ class integration(object):
         response = answer.json()
         readble_json = response['result']['revision']
         return readble_json
-
+    
+    #Returns logging to stdout
     def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):
         log = logging.getLogger(name)
         log.setLevel(logging.DEBUG)
-        # Будут строки вида: "[2017-08-23 09:54:55,356] main.py:34 DEBUG    foo"
         formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')
-        #formatter = logging.Formatter('%(message)s')
-        # В stdout
         sh = logging.StreamHandler(stream=sys.stdout)
         sh.setFormatter(formatter)
         log.addHandler(sh)
