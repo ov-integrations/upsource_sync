@@ -111,7 +111,6 @@ class integration(object):
     def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
         log = self.get_logger()
         for issue in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, ''):
-            print(issue)
             try:
                 issue == issue['XITOR_KEY']
             except Exception:
