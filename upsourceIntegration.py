@@ -4,187 +4,216 @@ import json
 import logging
 import sys
 
-class integration(object):
+class Integration(object):
 
-    def __init__(self, urlUpsource="", loginUpsource="", passUpsource="", urlOnevizion="", loginOnevizion="", passOnevizion="", projectName="", projectOnevizion=""):
-        self.urlUpsource = urlUpsource
-        self.loginUpsource = loginUpsource
-        self.passUpsource = passUpsource
-        self.urlOnevizion = urlOnevizion
-        self.loginOnevizion = loginOnevizion
-        self.passOnevizion = passOnevizion
-        self.projectName = projectName
-        self.projectOnevizion = projectOnevizion
+    def __init__(self, url_upsource="", login_upsource="", pass_upsource="", url_onevizion="", login_onevizion="", pass_onevizion="", project_name="", project_onevizion=""):
+        self.url_upsource = url_upsource
+        self.login_upsource = login_upsource
+        self.pass_upsource = pass_upsource
+        self.url_onevizion = url_onevizion
+        self.login_onevizion = login_onevizion
+        self.pass_onevizion = pass_onevizion
+        self.project_name = project_name
+        self.project_onevizion = project_onevizion
         
-        authUpsource = HTTPBasicAuth(loginUpsource, passUpsource)
-        authOnevizion = HTTPBasicAuth(loginOnevizion, passOnevizion)
+        auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
+        auth_onevizion = HTTPBasicAuth(login_onevizion, pass_onevizion)
         headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
 
-        self.revisionList(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers)
-        self.createReview(urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers)
+        #self.revision_list(url_onevizion, auth_onevizion, url_upsource, auth_upsource, project_name, project_onevizion, headers)
+        self.create_review(url_onevizion, auth_onevizion, url_upsource, auth_upsource, project_name, project_onevizion, headers)
 
     #Returns the list of revisions in a given project
-    def revisionList(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
+    def revision_list(self, url_onevizion, auth_onevizion, url_upsource, auth_upsource, project_name, project_onevizion, headers):
         log = self.get_logger()
         log.info('Started upsource integration')
         log.info('Started updating the status of issues')
 
-        skipNumber = 0
-        while skipNumber != None:
-            url = urlUpsource + '~rpc/getRevisionsList'
-            data = {"projectId":projectName, "limit":1, "skip":skipNumber}
-            answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
+        skip_number = 0
+        while skip_number != None:
+            url = url_upsource + '~rpc/getRevisionsList'
+            data = {"projectId":project_name, "limit":1, "skip":skip_number}
+            answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
             response = answer.json()
             readble_json = response['result']
 
             if 'revision' in readble_json:
-                skipNumber = skipNumber + 1
-                revisionId = readble_json['revision'][0]['revisionId']
+                skip_number = skip_number + 1
+                revision_id = readble_json['revision'][0]['revisionId']
 
-                reviewInfo = self.reviewInfo(urlUpsource, authUpsource, projectName, revisionId, headers)
+                review_info = self.review_info(url_upsource, auth_upsource, project_name, revision_id, headers)
 
-                if reviewInfo == [{}]:
-                    log.info('This revision has no review')
+                if review_info == [{}]:
+                    print('This revision has no review')
                 else:
-                    reviewTitle = self.getIssueTitle(reviewInfo[0]['reviewInfo']['title'])
-                    reviewStatus = reviewInfo[0]['reviewInfo']['state']
-                    reviewBranche = self.revisionBranche(urlUpsource, authUpsource, projectName, headers, revisionId)
+                    review_title = self.get_issue_title(review_info[0]['reviewInfo']['title'])
+                    review_status = review_info[0]['reviewInfo']['state']
+                    review_branche = self.revision_branche(url_upsource, auth_upsource, project_name, headers, revision_id)
 
-                    self.checkStatus(urlOnevizion, authOnevizion, projectOnevizion, headers, reviewTitle, reviewStatus, reviewBranche)
+                    self.check_status(url_onevizion, auth_onevizion, project_onevizion, headers, review_title, review_status, review_branche)
             else:
-                skipNumber = None
+                skip_number = None
         log.info('Finished updating the status of issues')
 
     #Returns short review information for a set of revisions
-    def reviewInfo(self, urlUpsource, authUpsource, projectName, revisionId, headers):
-        url = urlUpsource + '~rpc/getRevisionReviewInfo'
-        data = {"projectId":projectName, "revisionId":revisionId}
-        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
+    def review_info(self, url_upsource, auth_upsource, project_name, revision_id, headers):
+        url = url_upsource + '~rpc/getRevisionReviewInfo'
+        data = {"projectId":project_name, "revisionId":revision_id}
+        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
         response = answer.json()
         readble_json = response['result']['reviewInfo']
         return readble_json
 
     #Returns issue title
-    def getIssueTitle(self, issueTitle):
-        if 'Revert \"' in issueTitle:
+    def get_issue_title(self, issue_title):
+        if 'Revert \"' in issue_title:
             return None
-        elif 'Review of ' in issueTitle:
+        elif 'Review of ' in issue_title:
             return None
-        elif 'Merge branch \"' in issueTitle:
+        elif 'Merge branch \"' in issue_title:
             return None
-        elif 'Merge branch \'master\' into ' in issueTitle:
+        elif 'Merge branch \'master\' into ' in issue_title:
             return None
         else:
-            return issueTitle[issueTitle.find('') : issueTitle.find(' ')]
+            return issue_title[issue_title.find('') : issue_title.find(' ')]
     
     #Returns the list of branches a revision is part of
-    def revisionBranche(self, urlUpsource, authUpsource, projectName, headers, revisionId):
-        url = urlUpsource + '~rpc/getRevisionBranches'
-        data = {"projectId":projectName, "revisionId":revisionId}
-        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
+    def revision_branche(self, url_upsource, auth_upsource, project_name, headers, revision_id):
+        url = url_upsource + '~rpc/getRevisionBranches'
+        data = {"projectId":project_name, "revisionId":revision_id}
+        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
         response = answer.json()
         readble_json = response['result']['branchName']
         return readble_json
     
-    #Checks review status and run updateIssue
-    def checkStatus(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, status, branch):
+    #Checks review status and run update_issue
+    def check_status(self, url_onevizion, auth_onevizion, project_onevizion, headers, issue, status, branch):
         log = self.get_logger()
         if issue == 'None':
             return None
         else:
             if status == 2 and branch == 'master':
-                self.updateIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, issue, 'Ready for Merge')
+                self.update_issue(url_onevizion, auth_onevizion, project_onevizion, headers, issue, 'Ready for Merge')
             elif status == 2 and branch != 'master':
-                self.updateIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, issue, 'Ready for Test')
+                self.update_issue(url_onevizion, auth_onevizion, project_onevizion, headers, issue, 'Ready for Test')
             else: log.info('Review ' + str(issue) + ' is not yet closed')
 
     #Updates issue status if review status = 2 (closed)
-    def updateIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue, status):
+    def update_issue(self, url_onevizion, auth_onevizion, project_onevizion, headers, issue, status):
         log = self.get_logger()
 
-        issueTitle = self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, issue)
-        if issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
-            url = urlOnevizion + 'api/v3/trackors/' + str(issueTitle['TRACKOR_ID'])
+        issue_title = self.check_issue(url_onevizion, auth_onevizion, project_onevizion, headers, issue)
+        if issue_title['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
+            url = url_onevizion + 'api/v3/trackors/' + str(issue_title['TRACKOR_ID'])
             data = {"VQS_IT_STATUS":status}
-            answer = requests.put(url, headers=headers, data=json.dumps(data), auth=authOnevizion)
-            log.info('Issue ' + issueTitle['TRACKOR_KEY'] + ' updated status to "Ready for Merge"')
-        elif issueTitle['VQS_IT_STATUS'] == 'Ready for Review' and status == "Ready for Test":
-            url = urlOnevizion + 'api/v3/trackors/' + str(issueTitle['TRACKOR_ID'])
+            answer = requests.put(url, headers=headers, data=json.dumps(data), auth=auth_onevizion)
+            log.info('Issue ' + issue_title['TRACKOR_KEY'] + ' updated status to "Ready for Merge"')
+        elif issue_title['VQS_IT_STATUS'] == 'Ready for Review' and status == "Ready for Test":
+            url = url_onevizion + 'api/v3/trackors/' + str(issue_title['TRACKOR_ID'])
             data = {"VQS_IT_STATUS":status}
-            answer = requests.put(url, headers=headers, data=json.dumps(data), auth=authOnevizion)
-            log.info('Issue ' + issueTitle['TRACKOR_KEY'] + ' updated status to "Ready for Test"')
-        else: log.info('Issue ' + issueTitle['TRACKOR_KEY'] + ' has already been updated')
+            answer = requests.put(url, headers=headers, data=json.dumps(data), auth=auth_onevizion)
+            log.info('Issue ' + issue_title['TRACKOR_KEY'] + ' updated status to "Ready for Test"')
+        else: log.info('Issue ' + issue_title['TRACKOR_KEY'] + ' has already been updated')
 
     #Checks issue status
-    def checkIssue(self, urlOnevizion, authOnevizion, projectOnevizion, headers, issue):
+    def check_issue(self, url_onevizion, auth_onevizion, project_onevizion, headers, issue):
         if issue == '':
-            url = urlOnevizion + 'api/v3/trackor_types/Issue/trackors'
-            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "Product.TRACKOR_KEY":projectOnevizion}
-            answer = requests.get(url, headers=headers, params=params, auth=authOnevizion)
+            url = url_onevizion + 'api/v3/trackor_types/Issue/trackors'
+            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "Product.TRACKOR_KEY":project_onevizion}
+            answer = requests.get(url, headers=headers, params=params, auth=auth_onevizion)
             response = answer.json()
             return response
         else:
-            url = urlOnevizion + 'api/v3/trackor_types/Issue/trackors'
-            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "TRACKOR_KEY":issue, "Product.TRACKOR_KEY":projectOnevizion}
-            answer = requests.get(url, headers=headers, params=params, auth=authOnevizion)
+            url = url_onevizion + 'api/v3/trackor_types/Issue/trackors'
+            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "TRACKOR_KEY":issue, "Product.TRACKOR_KEY":project_onevizion}
+            answer = requests.get(url, headers=headers, params=params, auth=auth_onevizion)
             response = answer.json()
             return response
 
     #Creates review if issue status = 'Ready for Review'
-    def createReview(self, urlOnevizion, authOnevizion, urlUpsource, authUpsource, projectName, projectOnevizion, headers):
+    def create_review(self, url_onevizion, auth_onevizion, url_upsource, auth_upsource, project_name, project_onevizion, headers):
         log = self.get_logger()
         log.info('Started creating reviews')
-        for issue in self.checkIssue(urlOnevizion, authOnevizion, projectOnevizion, headers, ''):
+        for issue in self.check_issue(url_onevizion, auth_onevizion, project_onevizion, headers, ''):
             if issue['VQS_IT_STATUS'] != "Ready for Review":
                 log.info('No need to create a review for this issue - ' + str(issue['TRACKOR_KEY']))
             else:
-                for revisionId in self.filteredRevisionList(authUpsource, urlUpsource, projectName, headers, issue['TRACKOR_KEY']):
-                    url = urlUpsource + '~rpc/getRevisionReviewInfo'
-                    data = {"projectId":projectName, "revisionId":revisionId['revisionId']}
-                    answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
-                    response = answer.json()
-                    readble_json = response['result']['reviewInfo']
-
-                    if readble_json != [{}]:
+                for revision_id in self.filtered_revision_list(auth_upsource, url_upsource, project_name, headers, issue['TRACKOR_KEY']):
+                    review_info = self.review_info(url_upsource, auth_upsource, project_name, revision_id['revisionId'], headers)
+                    
+                    if review_info != [{}]:
                         log.info('Review already exists')
                     else:
-                        url = urlUpsource + '~rpc/createReview'
-                        data = {"projectId":projectName, "revisions":revisionId['revisionId']}
-                        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
+                        url = url_upsource + '~rpc/createReview'
+                        data = {"projectId":project_name, "revisions":revision_id['revisionId']}
+                        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
                         log.info('Review for ' + str(issue['TRACKOR_KEY']) + ' created')
 
-                        reviewId = self.reviewInfo(urlUpsource, authUpsource, projectName, revisionId['revisionId'], headers)
+                        review_id = self.review_info(url_upsource, auth_upsource, project_name, revision_id['revisionId'], headers)
                         
-                        self.addReviewLabel(authUpsource, urlUpsource, projectName, reviewId[0]['reviewInfo']['reviewId']['reviewId'], headers)
+                        self.add_review_label(auth_upsource, url_upsource, project_name, review_id[0]['reviewInfo']['reviewId']['reviewId'], headers)
                         log.info('Label "ready for review" added to review ' + str(issue['TRACKOR_KEY']))
 
-                        self.deleteReviewer(authUpsource, urlUpsource, projectName, reviewId[0]['reviewInfo']['reviewId']['reviewId'], headers)
+                        self.delete_reviewer(auth_upsource, url_upsource, project_name, review_id[0]['reviewInfo']['reviewId']['reviewId'], headers)
                         log.info('Default reviewer deleted')
+
+                        for file_extension in self.get_revision_file_extension(auth_upsource, url_upsource, project_name, revision_id['revisionId'], headers):
+
+                            if file_extension['fileIcon'][5:] == 'sql':
+                                self.add_reviewer(auth_upsource, url_upsource, project_name, review_id[0]['reviewInfo']['reviewId']['reviewId'], "840cb243-75a1-4bba-8fad-5859779db1df", headers)
+                                log.info('Mikhail Knyazev added in reviewers')
+
+                            elif file_extension['fileIcon'][5:] == 'java':
+                                self.add_reviewer(auth_upsource, url_upsource, project_name, review_id[0]['reviewInfo']['reviewId']['reviewId'], "c7b9b297-d3e0-4148-af30-df20d676a0fd", headers)
+                                log.info('Dmitry Nesmelov added in reviewers')
+
+                            elif file_extension['fileIcon'][5:] == ['js', 'css', 'html']:
+                                self.add_reviewer(auth_upsource, url_upsource, project_name, review_id[0]['reviewInfo']['reviewId']['reviewId'], "9db3e4ca-5167-46b8-b114-5126af78d41c", headers)
+                                log.info('Alex Yuzvyak added in reviewers')
+
         log.info('Finished creating reviews')
         log.info('Finished upsource integration')
 
     #Returns the list of revisions that match the given search query
-    def filteredRevisionList(self, authUpsource, urlUpsource, projectName, headers, issue):
-        url = urlUpsource + '~rpc/getRevisionsListFiltered'
-        data = {"projectId":projectName, "limit":1, "query":issue}
-        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
+    def filtered_revision_list(self, auth_upsource, url_upsource, project_name, headers, issue):
+        url = url_upsource + '~rpc/getRevisionsListFiltered'
+        data = {"projectId":project_name, "limit":1, "query":issue}
+        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
         response = answer.json()
         readble_json = response['result']['revision']
         return readble_json
 
+    #Returns the list of changes (files that were added, removed, or modified) in a revision
+    def get_revision_file_extension(self, auth_upsource, url_upsource, project_name, revision_id, headers):
+        url = url_upsource + '~rpc/getRevisionChanges'
+        data = {"revision":{"projectId":project_name, "revisionId":revision_id}, "limit":10}
+        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
+        response = answer.json()
+        readble_json = response['result']['diff']
+        unique = {each['fileIcon']:each for each in readble_json}.values()
+        return unique
+
     #Removes a default reviewer from a review
-    def deleteReviewer(self, authUpsource, urlUpsource, projectName, reviewId, headers):
-        url = urlUpsource + '~rpc/removeParticipantFromReview'
-        data = {"reviewId":{"projectId":projectName, "reviewId":reviewId}, "participant":{"userId":"653c3d2e-394f-4c6b-8757-3e070c78c910", "role":2}}
-        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
+    def add_reviewer(self, auth_upsource, url_upsource, project_name, review_id, userId, headers):
+        url = url_upsource + '~rpc/addParticipantToReview'
+        data = {"reviewId":{"projectId":project_name, "reviewId":review_id}, "participant":{"userId":userId, "role":2}}
+        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
+        response = answer.json()
+        return response
+
+    #Removes a default reviewer from a review
+    def delete_reviewer(self, auth_upsource, url_upsource, project_name, review_id, headers):
+        url = url_upsource + '~rpc/removeParticipantFromReview'
+        data = {"reviewId":{"projectId":project_name, "reviewId":review_id}, "participant":{"userId":"653c3d2e-394f-4c6b-8757-3e070c78c910", "role":2}}
+        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
         response = answer.json()
         return response
 
     #Adds a label to a review
-    def addReviewLabel(self, authUpsource, urlUpsource, projectName, reviewId, headers):
-        url = urlUpsource + '~rpc/addReviewLabel'
-        data = {"projectId":projectName, "reviewId":{"projectId":projectName, "reviewId":reviewId}, "label":{"id":"ready", "name":"ready for review"}}
-        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=authUpsource)
+    def add_review_label(self, auth_upsource, url_upsource, project_name, review_id, headers):
+        url = url_upsource + '~rpc/addReviewLabel'
+        data = {"projectId":project_name, "reviewId":{"projectId":project_name, "reviewId":review_id}, "label":{"id":"ready", "name":"ready for review"}}
+        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
         response = answer.json()
         return response
 
