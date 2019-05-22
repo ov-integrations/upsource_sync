@@ -106,12 +106,12 @@ class Integration(object):
         if issue_title['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
             url = url_onevizion + 'api/v3/trackors/' + str(issue_title['TRACKOR_ID'])
             data = {"VQS_IT_STATUS":status}
-            answer = requests.put(url, headers=headers, data=json.dumps(data), auth=auth_onevizion)
+            requests.put(url, headers=headers, data=json.dumps(data), auth=auth_onevizion)
             log.info('Issue ' + issue_title['TRACKOR_KEY'] + ' updated status to "Ready for Merge"')
         elif issue_title['VQS_IT_STATUS'] == 'Ready for Review' and status == "Ready for Test":
             url = url_onevizion + 'api/v3/trackors/' + str(issue_title['TRACKOR_ID'])
             data = {"VQS_IT_STATUS":status}
-            answer = requests.put(url, headers=headers, data=json.dumps(data), auth=auth_onevizion)
+            requests.put(url, headers=headers, data=json.dumps(data), auth=auth_onevizion)
             log.info('Issue ' + issue_title['TRACKOR_KEY'] + ' updated status to "Ready for Test"')
         else: log.info('Issue ' + issue_title['TRACKOR_KEY'] + ' has already been updated')
 
@@ -146,7 +146,7 @@ class Integration(object):
                     else:
                         url = url_upsource + '~rpc/createReview'
                         data = {"projectId":project_name, "revisions":revision_id['revisionId']}
-                        answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
+                        requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
                         log.info('Review for ' + str(issue['TRACKOR_KEY']) + ' created')
 
                         review_id = self.review_info(url_upsource, auth_upsource, project_name, revision_id['revisionId'], headers)
@@ -194,9 +194,9 @@ class Integration(object):
         return unique
 
     #Removes a default reviewer from a review
-    def add_reviewer(self, auth_upsource, url_upsource, project_name, review_id, userId, headers):
+    def add_reviewer(self, auth_upsource, url_upsource, project_name, review_id, user_id, headers):
         url = url_upsource + '~rpc/addParticipantToReview'
-        data = {"reviewId":{"projectId":project_name, "reviewId":review_id}, "participant":{"userId":userId, "role":2}}
+        data = {"reviewId":{"projectId":project_name, "reviewId":review_id}, "participant":{"userId":user_id, "role":2}}
         answer = requests.post(url, headers=headers, data=json.dumps(data), auth=auth_upsource)
         response = answer.json()
         return response
