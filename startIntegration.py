@@ -2,16 +2,16 @@ import upsourceIntegration
 import json
 
 with open('SettingsFile.integration.json', "rb") as PFile:
-    passwordData = json.loads(PFile.read().decode('utf-8'))
+    password_data = json.loads(PFile.read().decode('utf-8'))
 
-urlUpsource = passwordData["urlUpsource"]
-loginUpsource = passwordData["loginUpsource"]
-passUpsource = passwordData["passUpsource"]
+url_upsource = password_data["urlUpsource"]
+login_upsource = password_data["loginUpsource"]
+pass_upsource = password_data["passUpsource"]
 
-urlOnevizion = passwordData["urlOnevizion"]
-loginOnevizion = passwordData["loginOnevizion"]
-passOnevizion = passwordData["passOnevizion"]
-projectName = passwordData["projectName"]
-projectOnevizion = passwordData["projectOnevizion"]
+url_onevizion = password_data["urlOnevizion"]
+login_onevizion = password_data["loginOnevizion"]
+pass_onevizion = password_data["passOnevizion"]
+project_name = password_data["projectName"]
+project_onevizion = password_data["projectOnevizion"]
 
-upsourceIntegration.integration(urlUpsource=urlUpsource, loginUpsource=loginUpsource, passUpsource=passUpsource, urlOnevizion=urlOnevizion, loginOnevizion=loginOnevizion, passOnevizion=passOnevizion, projectName=projectName, projectOnevizion=projectOnevizion)
+upsourceIntegration.Integration(url_upsource=url_upsource, login_upsource=login_upsource, pass_upsource=pass_upsource, url_onevizion=url_onevizion, login_onevizion=login_onevizion, pass_onevizion=pass_onevizion, project_name=project_name, project_onevizion=project_onevizion)
