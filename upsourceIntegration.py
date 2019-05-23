@@ -35,16 +35,12 @@ class Integration(object):
             answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
             response = answer.json()
             readble_json = response['result']
-
+            
             if 'revision' in readble_json:
                 skip_number = skip_number + 1
                 revision_id = readble_json['revision'][0]['revisionId']
 
-                if 'branchHeadLabel' in readble_json:
-                    branch = readble_json['revision'][0]['branchHeadLabel']
-
                 review_info = self.review_info(revision_id)
-
                 if review_info == [{}]:
                     print('This revision has no review')
                 else:
@@ -52,9 +48,13 @@ class Integration(object):
                     review_branche = self.revision_branche(revision_id)
                     review_status = review_info[0]['reviewInfo']['state']
 
-                    if review_status == 1 and branch != 'master':
-                        self.branch_review(review_info[0]['reviewInfo']['reviewId']['reviewId'], branch)
-                        log.info('Review - ' + review_title + ' changed to review for branch')
+                    revision_branch = readble_json['revision'][0]
+                    if 'branchHeadLabel' in revision_branch:
+                        branch = revision_branch['branchHeadLabel'][0]
+
+                        if review_status == 1 and branch != 'master':
+                            self.branch_review(review_info[0]['reviewInfo']['reviewId']['reviewId'], branch)
+                            log.info('Review ' + review_title + ' changed to review for branch')
 
                     self.check_status(review_title, review_status, review_branche)
             else:
