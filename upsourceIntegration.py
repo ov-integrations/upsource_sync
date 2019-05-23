@@ -20,8 +20,9 @@ class Integration(object):
         self.auth_onevizion = HTTPBasicAuth(login_onevizion, pass_onevizion)
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
 
-        self.revision_list()
-        self.create_review()
+        self.branch_review("BLNK-CR-52", "Depl-125306")
+        # self.revision_list()
+        # self.create_review()
 
     #Returns the list of revisions in a given project
     def revision_list(self):
@@ -41,14 +42,21 @@ class Integration(object):
                 skip_number = skip_number + 1
                 revision_id = readble_json['revision'][0]['revisionId']
 
+                if 'branchHeadLabel' in readble_json:
+                    branch = readble_json['revision'][0]['branchHeadLabel']
+
                 review_info = self.review_info(revision_id)
 
                 if review_info == [{}]:
                     print('This revision has no review')
                 else:
                     review_title = self.get_issue_title(review_info[0]['reviewInfo']['title'])
-                    review_status = review_info[0]['reviewInfo']['state']
                     review_branche = self.revision_branche(revision_id)
+                    review_status = review_info[0]['reviewInfo']['state']
+
+                    if review_status == 1 and branch != 'master':
+                        self.branch_review(review_info[0]['reviewInfo']['reviewId']['reviewId'], branch)
+                        log.info('Review - ' + review_title + ' changed to review for branch')
 
                     self.check_status(review_title, review_status, review_branche)
             else:
@@ -87,6 +95,12 @@ class Integration(object):
         readble_json = response['result']['branchName']
         return readble_json
     
+    #Change a review to a review for a branch
+    def branch_review(self, review_id, branch):
+        url = self.url_upsource + '~rpc/startBranchTracking'
+        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+
     #Checks review status and run update_issue
     def check_status(self, issue, status, branch):
         log = self.get_logger()
