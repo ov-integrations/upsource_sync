@@ -121,13 +121,13 @@ class Integration(object):
     def check_issue(self, issue):
         if issue == '':
             url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "Product.TRACKOR_KEY":self.project_onevizion}
+            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS", "Product.TRACKOR_KEY":self.project_onevizion}
             answer = requests.get(url, headers=self.headers, params=params, auth=self.auth_onevizion)
             response = answer.json()
             return response
         else:
             url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Product.TRACKOR_KEY", "TRACKOR_KEY":issue, "Product.TRACKOR_KEY":self.project_onevizion}
+            params = {"fields":"TRACKOR_KEY, VQS_IT_STATUS", "TRACKOR_KEY":issue, "Product.TRACKOR_KEY":self.project_onevizion}
             answer = requests.get(url, headers=self.headers, params=params, auth=self.auth_onevizion)
             response = answer.json()
             return response
@@ -143,7 +143,6 @@ class Integration(object):
             else:
                 for revision_id in self.filtered_revision_list(issue['TRACKOR_KEY']):
                     review_info = self.review_info(revision_id['revisionId'])
-                    
                     if review_info != [{}]:
                         log.info('Review already exists')
                     else:
@@ -152,25 +151,15 @@ class Integration(object):
                         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
                         log.info('Review for ' + str(issue['TRACKOR_KEY']) + ' created')
                         
-                        self.add_review_label(review_info[0]['reviewInfo']['reviewId']['reviewId'])
+                        review_id = self.review_info(revision_id['revisionId'])
+
+                        self.add_review_label(review_id[0]['reviewInfo']['reviewId']['reviewId'])
                         log.info('Label "ready for review" added to review ' + str(issue['TRACKOR_KEY']))
 
-                        self.delete_reviewer(review_info[0]['reviewInfo']['reviewId']['reviewId'])
+                        self.delete_reviewer(review_id[0]['reviewInfo']['reviewId']['reviewId'])
                         log.info('Default reviewer deleted')
 
-                        for file_extension in self.get_revision_file_extension(revision_id['revisionId']):
-
-                            if file_extension['fileIcon'][5:] == 'sql':
-                                self.add_reviewer(review_info[0]['reviewInfo']['reviewId']['reviewId'], "840cb243-75a1-4bba-8fad-5859779db1df")
-                                log.info('Mikhail Knyazev added in reviewers')
-
-                            elif file_extension['fileIcon'][5:] == 'java':
-                                self.add_reviewer(review_info[0]['reviewInfo']['reviewId']['reviewId'], "c7b9b297-d3e0-4148-af30-df20d676a0fd")
-                                log.info('Dmitry Nesmelov added in reviewers')
-
-                            elif file_extension['fileIcon'][5:] == ['js', 'css', 'html']:
-                                self.add_reviewer(review_info[0]['reviewInfo']['reviewId']['reviewId'], "9db3e4ca-5167-46b8-b114-5126af78d41c")
-                                log.info('Alex Yuzvyak added in reviewers')
+                        self.add_reviewer(review_id[0]['reviewInfo']['reviewId']['reviewId'], revision_id['revisionId'])
 
         log.info('Finished creating reviews')
         log.info('Finished upsource integration')
@@ -184,6 +173,29 @@ class Integration(object):
         readble_json = response['result']['revision']
         return readble_json
 
+    #Add a reviewer to the review
+    def add_reviewer(self, review_id, revision_id):
+        log = self.get_logger()
+
+        for revision_file_extension in self.get_revision_file_extension(revision_id):
+            file_extension = revision_file_extension['fileIcon'][5:]
+
+            if file_extension == 'sql':
+                user_id = "840cb243-75a1-4bba-8fad-5859779db1df"
+                log.info('Mikhail Knyazev added in reviewers')
+
+            elif file_extension == 'java':
+                user_id = "c7b9b297-d3e0-4148-af30-df20d676a0fd"
+                log.info('Dmitry Nesmelov added in reviewers')
+
+            elif file_extension == ['js', 'css', 'html']:
+                user_id = "9db3e4ca-5167-46b8-b114-5126af78d41c"
+                log.info('Alex Yuzvyak added in reviewers')
+
+            url = self.url_upsource + '~rpc/addParticipantToReview'
+            data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "participant":{"userId":user_id, "role":2}}
+            requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+
     #Returns the list of changes (files that were added, removed, or modified) in a revision
     def get_revision_file_extension(self, revision_id):
         url = self.url_upsource + '~rpc/getRevisionChanges'
@@ -193,14 +205,6 @@ class Integration(object):
         readble_json = response['result']['diff']
         unique_file_extension = {file_extension['fileIcon']:file_extension for file_extension in readble_json}.values()
         return unique_file_extension
-
-    #Removes a default reviewer from a review
-    def add_reviewer(self, review_id, user_id):
-        url = self.url_upsource + '~rpc/addParticipantToReview'
-        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "participant":{"userId":user_id, "role":2}}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-        response = answer.json()
-        return response
 
     #Removes a default reviewer from a review
     def delete_reviewer(self, review_id):
