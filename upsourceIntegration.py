@@ -20,14 +20,12 @@ class Integration(object):
         self.auth_onevizion = HTTPBasicAuth(login_onevizion, pass_onevizion)
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
 
-        self.branch_review("BLNK-CR-52", "Depl-125306")
-        # self.revision_list()
-        # self.create_review()
+        self.create_review()
+        self.revision_list()
 
     #Returns the list of revisions in a given project
     def revision_list(self):
         log = self.get_logger()
-        log.info('Started upsource integration')
         log.info('Started updating the status of issues')
 
         skip_number = 0
@@ -63,6 +61,7 @@ class Integration(object):
                 skip_number = None
 
         log.info('Finished updating the status of issues')
+        log.info('Finished upsource integration')
 
     #Returns short review information for a set of revisions
     def review_info(self, revision_id):
@@ -148,7 +147,8 @@ class Integration(object):
 
     #Creates review if issue status = 'Ready for Review'
     def create_review(self):
-        log = self.get_logger()
+        log = self.get_logger()        
+        log.info('Started upsource integration')
         log.info('Started creating reviews')
 
         for issue in self.check_issue(''):
@@ -176,7 +176,6 @@ class Integration(object):
                         self.add_reviewer(review_id[0]['reviewInfo']['reviewId']['reviewId'], revision_id['revisionId'])
 
         log.info('Finished creating reviews')
-        log.info('Finished upsource integration')
 
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self, issue):
