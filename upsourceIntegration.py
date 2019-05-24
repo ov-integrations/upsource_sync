@@ -21,40 +21,33 @@ class Integration(object):
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
 
         self.create_review()
-        self.revision_list()
+        self.update_issue()
 
-    #Returns the list of revisions in a given project
-    def revision_list(self):
+    #Updates issue status if review status = 2 (closed)
+    def update_issue(self):
         log = self.get_logger()
         log.info('Started updating the status of issues')
 
         skip_number = 0
         while skip_number != None:
-            url = self.url_upsource + '~rpc/getRevisionsList'
-            data = {"projectId":self.project_name, "limit":1, "skip":skip_number}
-            answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-            response = answer.json()
-            readble_json = response['result']
-            
-            if 'revision' in readble_json:
-                skip_number = skip_number + 1
-                revision_id = readble_json['revision'][0]['revisionId']
+            revision_list = self.revision_list(skip_number)
 
+            if 'revision' in revision_list:
+                skip_number = skip_number + 1
+                revision = revision_list['revision'][0]
+                revision_id = revision['revisionId']
                 review_info = self.review_info(revision_id)
-                if review_info == [{}]:
-                    print('This revision has no review')
-                else:
+
+                if review_info != [{}]:
                     review_title = self.get_issue_title(review_info[0]['reviewInfo']['title'])
                     review_branche = self.revision_branche(revision_id)
                     review_status = review_info[0]['reviewInfo']['state']
 
-                    revision_branch = readble_json['revision'][0]
-                    if 'branchHeadLabel' in revision_branch:
-                        branch = revision_branch['branchHeadLabel'][0]
+                    if 'branchHeadLabel' in revision:
+                        branch = revision['branchHeadLabel'][0]
 
                         if review_status == 1 and branch != 'master':
                             self.branch_review(review_info[0]['reviewInfo']['reviewId']['reviewId'], branch)
-                            log.info('Review ' + review_title + ' changed to review for branch')
 
                     self.check_status(review_title, review_status, review_branche)
             else:
@@ -62,6 +55,15 @@ class Integration(object):
 
         log.info('Finished updating the status of issues')
         log.info('Finished upsource integration')
+
+    #Returns the list of revisions in a given project
+    def revision_list(self, skip_number):
+        url = self.url_upsource + '~rpc/getRevisionsList'
+        data = {"projectId":self.project_name, "limit":1, "skip":skip_number}
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        response = answer.json()
+        readble_json = response['result']
+        return readble_json
 
     #Returns short review information for a set of revisions
     def review_info(self, revision_id):
@@ -102,19 +104,14 @@ class Integration(object):
 
     #Checks review status and run update_issue
     def check_status(self, issue, status, branch):
-        log = self.get_logger()
-
-        if issue == 'None':
-            return None
-        else:
+        if issue != 'None':
             if status == 2 and branch == 'master':
-                self.update_issue(issue, 'Ready for Merge')
+                self.update_status(issue, 'Ready for Merge')
             elif status == 2 and branch != 'master':
-                self.update_issue(issue, 'Ready for Test')
-            else: log.info('Review ' + str(issue) + ' is not yet closed')
+                self.update_status(issue, 'Ready for Test')
 
-    #Updates issue status if review status = 2 (closed)
-    def update_issue(self, issue, status):
+    #Updates issue status
+    def update_status(self, issue, status):
         log = self.get_logger()
 
         issue_title = self.check_issue(issue)
@@ -128,7 +125,6 @@ class Integration(object):
             data = {"VQS_IT_STATUS":status}
             requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
             log.info('Issue ' + issue_title['TRACKOR_KEY'] + ' updated status to "Ready for Test"')
-        else: log.info('Issue ' + issue_title['TRACKOR_KEY'] + ' has already been updated')
 
     #Checks issue status
     def check_issue(self, issue):
@@ -147,19 +143,15 @@ class Integration(object):
 
     #Creates review if issue status = 'Ready for Review'
     def create_review(self):
-        log = self.get_logger()        
+        log = self.get_logger()
         log.info('Started upsource integration')
         log.info('Started creating reviews')
 
         for issue in self.check_issue(''):
-            if issue['VQS_IT_STATUS'] != "Ready for Review":
-                log.info('No need to create a review for this issue - ' + str(issue['TRACKOR_KEY']))
-            else:
+            if issue['VQS_IT_STATUS'] == "Ready for Review":
                 for revision_id in self.filtered_revision_list(issue['TRACKOR_KEY']):
                     review_info = self.review_info(revision_id['revisionId'])
-                    if review_info != [{}]:
-                        log.info('Review already exists')
-                    else:
+                    if review_info == [{}]:
                         url = self.url_upsource + '~rpc/createReview'
                         data = {"projectId":self.project_name, "revisions":revision_id['revisionId']}
                         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
