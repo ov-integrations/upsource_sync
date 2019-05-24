@@ -20,7 +20,7 @@ class Integration(object):
         self.auth_onevizion = HTTPBasicAuth(login_onevizion, pass_onevizion)
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
 
-        self.create_review()
+        self.create_delete_review()
         self.update_issue()
 
     #Updates issue status if review status = 2 (closed)
@@ -50,6 +50,7 @@ class Integration(object):
                             self.branch_review(review_info[0]['reviewInfo']['reviewId']['reviewId'], branch)
 
                     self.check_status(review_title, review_status, review_branche)
+                else: log.info('This revision has no review')
             else:
                 skip_number = None
 
@@ -141,33 +142,51 @@ class Integration(object):
             response = answer.json()
             return response
 
-    #Creates review if issue status = 'Ready for Review'
-    def create_review(self):
+    #Create review if issue status = 'Ready for Review';
+    #Close review if issue status = 'Ready for Test/Merge'
+    def create_delete_review(self):
         log = self.get_logger()
         log.info('Started upsource integration')
         log.info('Started creating reviews')
 
         for issue in self.check_issue(''):
             if issue['VQS_IT_STATUS'] == "Ready for Review":
-                for revision_id in self.filtered_revision_list(issue['TRACKOR_KEY']):
-                    review_info = self.review_info(revision_id['revisionId'])
-                    if review_info == [{}]:
-                        url = self.url_upsource + '~rpc/createReview'
-                        data = {"projectId":self.project_name, "revisions":revision_id['revisionId']}
-                        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-                        log.info('Review for ' + str(issue['TRACKOR_KEY']) + ' created')
-                        
-                        review_id = self.review_info(revision_id['revisionId'])
+                revision_id = self.filtered_revision_list(issue['TRACKOR_KEY'])
+                review_info = self.review_info(revision_id[0]['revisionId'])
+                if review_info == [{}]:
+                    self.create_review(revision_id[0]['revisionId'])
+                    log.info('Review for ' + str(issue['TRACKOR_KEY']) + ' created')
+                    
+                    review_id = self.review_info(revision_id[0]['revisionId'])
 
-                        self.add_review_label(review_id[0]['reviewInfo']['reviewId']['reviewId'])
-                        log.info('Label "ready for review" added to review ' + str(issue['TRACKOR_KEY']))
+                    self.add_review_label(review_id[0]['reviewInfo']['reviewId']['reviewId'])
+                    log.info('Label "ready for review" added to review ' + str(issue['TRACKOR_KEY']))
 
-                        self.delete_reviewer(review_id[0]['reviewInfo']['reviewId']['reviewId'])
-                        log.info('Default reviewer deleted')
+                    self.delete_reviewer(review_id[0]['reviewInfo']['reviewId']['reviewId'])
+                    log.info('Default reviewer deleted')
 
-                        self.add_reviewer(review_id[0]['reviewInfo']['reviewId']['reviewId'], revision_id['revisionId'])
+                    self.add_reviewer(review_id[0]['reviewInfo']['reviewId']['reviewId'], revision_id[0]['revisionId'])
+
+            elif issue['VQS_IT_STATUS'] == ["Ready for Test", "Ready for Merge"]:
+                revision_id = self.filtered_revision_list(issue['TRACKOR_KEY'])
+                review_info = self.review_info(revision_id[0]['revisionId'])
+                if review_info != [{}]:
+                    self.close_review(review_info[0]['reviewInfo']['reviewId']['reviewId'])
+                    log.info('Review for ' + str(issue['TRACKOR_KEY']) + ' closed')
 
         log.info('Finished creating reviews')
+
+    #Create review
+    def create_review(self, revision_id):
+        url = self.url_upsource + '~rpc/createReview'
+        data = {"projectId":self.project_name, "revisions":revision_id}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+    
+    #Close review
+    def close_review(self, revision_id):
+        url = self.url_upsource + '~rpc/closeReview'
+        data = {"reviewId":{"projectId":self.project_name, "reviewId":reviewId}, "isFlagged":"true"}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self, issue):
