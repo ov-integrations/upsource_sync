@@ -179,7 +179,7 @@ class Integration(object):
                             revision_id = revision_list['revision'][0]['revisionId']
                             review_info = self.review_info(revision_id)
 
-                            self.add_revision_to_review(review_info[0]['reviewInfo']['reviewId']['reviewId'], revision_id)
+                            self.add_revision_to_review(review_id[0]['reviewInfo']['reviewId']['reviewId'], revision_id)
                         else:
                             skip_number = None
 
@@ -200,17 +200,18 @@ class Integration(object):
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
     
     #Close review
-    def close_review(self, reviewId):
+    def close_review(self, review_id):
         url = self.url_upsource + '~rpc/closeReview'
-        data = {"reviewId":{"projectId":self.project_name, "reviewId":reviewId}, "isFlagged":True}
+        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "isFlagged":True}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Attaches a revision to a review
     def add_revision_to_review(self, review_id, revision_id):
         url = self.url_upsource + '~rpc/addRevisionToReview'
         data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "revisionId":revision_id}
-        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        response = answer.json()
+        print(response)
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self, issue, skip_number):
         url = self.url_upsource + '~rpc/getRevisionsListFiltered'
