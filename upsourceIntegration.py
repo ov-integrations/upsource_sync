@@ -154,8 +154,8 @@ class Integration(object):
         log.info('Started creating reviews')
 
         for issue in self.check_issue(''):
-            issue_title = 'Depl-135589'
-            issue_status = 'Ready for Review'
+            issue_title = issue['TRACKOR_KEY']
+            issue_status = issue['VQS_IT_STATUS']
 
             if issue_status in ['Ready for Review', 'Ready for Test', 'Ready for Merge']:
                 if issue_status == "Ready for Review":
@@ -210,7 +210,6 @@ class Integration(object):
             else:
                 skip_number = None
         return review_info_returned
-
 
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self, issue, skip_number):
