@@ -265,7 +265,6 @@ class Integration(object):
             if 'revision' in revision_list:
                 skip_number = skip_number + 1
                 revision_id = revision_list['revision'][0]['revisionId']
-                review_info = self.review_info(revision_id)
 
                 url = self.url_upsource + '~rpc/addRevisionToReview'
                 data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "revisionId":revision_id}
