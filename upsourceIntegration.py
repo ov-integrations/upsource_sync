@@ -154,17 +154,17 @@ class Integration(object):
         log.info('Started creating reviews')
 
         for issue in self.check_issue(''):
-            issue_title = issue['TRACKOR_KEY']
-            issue_status = issue['VQS_IT_STATUS']
+            issue_title = 'Depl-135589'
+            issue_status = 'Ready for Review'
 
             if issue_status in ['Ready for Review', 'Ready for Test', 'Ready for Merge']:
                 if issue_status == "Ready for Review":
-                    review_info = self.check_review(issue_title)
-                    if review_info == [{}]:
-                        self.create_review(revision_id['revision'][0]['revisionId'])
+                    revision_id = self.check_review(issue_title)
+                    if revision_id != '':
+                        self.create_review(revision_id)
                         log.info('Review for ' + str(issue_title) + ' created')
                         
-                        created_review_info = self.review_info(revision_id['revision'][0]['revisionId'])
+                        created_review_info = self.review_info(revision_id)
                         review_id = created_review_info[0]['reviewInfo']['reviewId']['reviewId']
 
                         self.add_review_label(review_id)
@@ -173,7 +173,7 @@ class Integration(object):
                         self.delete_default_reviewer(review_id)
                         log.info('Default reviewer deleted')
 
-                        self.add_reviewer(review_id, revision_id['revision'][0]['revisionId'])
+                        self.add_reviewer(review_id, revision_id)
 
                         self.add_revision_to_review(issue_title, review_id)
 
@@ -193,7 +193,7 @@ class Integration(object):
     #If there is no review, then returns null and the review is created
     def check_review(self, issue_title):
         skip_number = 0
-        review_info_returned = [{}]
+        review_info_returned = ''
         while skip_number != None:
             revision_id = self.filtered_revision_list(issue_title, skip_number)
 
@@ -203,13 +203,14 @@ class Integration(object):
                 if review_info != [{}]:
                     review_id = review_info[0]['reviewInfo']['reviewId']['reviewId']
                     self.add_revision_to_review(issue_title, review_id)
-                    review_info_returned = ''
                     skip_number = None
                 else:
+                    review_info_returned = revision_id['revision'][0]['revisionId']
                     skip_number = skip_number + 1
             else:
                 skip_number = None
         return review_info_returned
+
 
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self, issue, skip_number):
