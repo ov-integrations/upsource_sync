@@ -21,8 +21,9 @@ class Integration(object):
         self.auth_onevizion = HTTPBasicAuth(login_onevizion, pass_onevizion)
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
 
-        self.create_or_close_review()
-        self.update_issue_status()
+        self.check_review("Depl-135589")
+        # self.create_or_close_review()
+        # self.update_issue_status()
 
     def update_issue_status(self):
         log = self.get_logger()
@@ -128,8 +129,9 @@ class Integration(object):
             if issue_status in ['Ready for Review', 'Ready for Test', 'Ready for Merge']:
 
                 if issue_status == "Ready for Review":
-                    revision_id = self.check_review(issue_title)
-
+                    review_info_returned  = self.check_review(issue_title)
+                    if review_info_returned  != '':
+                        self.setting_new_review(review_info_returned , issue_title)
                 else:
                     revision_id = self.filtered_revision_list(issue_title, 0)
                     review_info = self.review_info(revision_id['revision'][0]['revisionId'])
@@ -146,6 +148,7 @@ class Integration(object):
     #If there is no review, then create a review
     def check_review(self, issue_title):
         skip_number = 0
+        review_info_returned  = ''
         while skip_number != None:
             revision_id = self.filtered_revision_list(issue_title, skip_number)
 
@@ -157,20 +160,20 @@ class Integration(object):
                     review_id = review_info['reviewInfo']['reviewId']['reviewId']
                     self.add_revision_to_review(issue_title, review_id)
 
-                    if 'reviewInfo' in review_info:
-                        review_status = review_info['reviewInfo']['state']
-                        self.branch_review(revision, review_status, review_id)
+                    review_status = review_info['reviewInfo']['state']
+                    self.branch_review(revision, review_status, review_id)
 
                     skip_number = None
 
                 else:
-                    revision_info_returned = revision_id['revision'][0]
-                    self.setting_new_review(revision_info_returned, issue_title)
+                    review_info_returned  = revision_id['revision'][0]
 
                     skip_number = skip_number + 1
 
             else:
                 skip_number = None
+
+        return review_info_returned 
 
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self, issue, skip_number):
@@ -182,10 +185,10 @@ class Integration(object):
         return readble_json
 
     #Setting new review
-    def setting_new_review(self, revision_info_returned, issue_title):
+    def setting_new_review(self, review_info_returned , issue_title):
         log = self.get_logger()
-        revision_id = revision_info_returned['revisionId']
-        revision = revision_info_returned
+        revision_id = review_info_returned ['revisionId']
+        revision = review_info_returned 
 
         self.create_review(revision_id)
         log.info('Review for ' + str(issue_title) + ' created')
@@ -297,7 +300,7 @@ class Integration(object):
         skip_number = 0
         while skip_number != None:
             revision_list = self.filtered_revision_list(issue_title, skip_number)
-
+            print(revision_list)
             if 'revision' in revision_list:
                 skip_number = skip_number + 1
                 revision_id = revision_list['revision'][0]['revisionId']
