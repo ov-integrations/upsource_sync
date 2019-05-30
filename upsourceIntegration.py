@@ -153,14 +153,14 @@ class Integration(object):
             if 'revision' in revision_id:
                 revision = revision_id['revision'][0]
                 review_info = self.review_info(revision['revisionId'])
-                review_status = review_info[0]['reviewInfo']['state']
 
                 if review_info != [{}]:
                     review_id = review_info[0]['reviewInfo']['reviewId']['reviewId']
-
-                    self.branch_review(revision, review_status, review_id)
-
                     self.add_revision_to_review(issue_title, review_id)
+
+                    if 'reviewInfo' in review_info:
+                        review_status = review_info[0]['reviewInfo']['state']
+                        self.branch_review(revision, review_status, review_id)
 
                     skip_number = None
 
@@ -186,7 +186,7 @@ class Integration(object):
     def setting_new_review(self, revision_info_returned, issue_title):
         log = self.get_logger()
         revision_id = revision_info_returned['revisionId']
-        revision = revision_info_returned['revision'][0]
+        revision = revision_info_returned
 
         self.create_review(revision_id)
         log.info('Review for ' + str(issue_title) + ' created')
@@ -194,7 +194,7 @@ class Integration(object):
         created_review_info = self.review_info(revision_id)
         review_id = created_review_info[0]['reviewInfo']['reviewId']['reviewId']
         review_branche = self.revision_branch(revision_id)
-        review_status = created_review_info[0]['state']
+        review_status = created_review_info[0]['reviewInfo']['state']
 
         self.branch_review(revision, review_status, review_id)
 
