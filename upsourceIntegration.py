@@ -152,14 +152,14 @@ class Integration(object):
 
             if 'revision' in revision_id:
                 revision = revision_id['revision'][0]
-                review_info = self.review_info(revision['revisionId'])
+                review_info = self.review_info(revision['revisionId'])[0]
 
                 if review_info != [{}]:
-                    review_id = review_info[0]['reviewInfo']['reviewId']['reviewId']
+                    review_id = review_info['reviewInfo']['reviewId']['reviewId']
                     self.add_revision_to_review(issue_title, review_id)
 
                     if 'reviewInfo' in review_info:
-                        review_status = review_info[0]['reviewInfo']['state']
+                        review_status = review_info['reviewInfo']['state']
                         self.branch_review(revision, review_status, review_id)
 
                     skip_number = None
