@@ -20,10 +20,9 @@ class Integration(object):
         self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
         self.auth_onevizion = HTTPBasicAuth(login_onevizion, pass_onevizion)
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
-
-        self.check_review("Depl-135589")
-        # self.create_or_close_review()
-        # self.update_issue_status()
+        
+        self.create_or_close_review()
+        self.update_issue_status()
 
     def update_issue_status(self):
         log = self.get_logger()
