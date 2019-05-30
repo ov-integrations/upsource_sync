@@ -37,6 +37,7 @@ class Integration(object):
 
             if 'reviews' in review:
                 review_info = review['reviews'][0]
+
                 created_at = str(review_info['createdAt'])[:-3]
                 create_date = str(datetime.fromtimestamp(int(created_at)).strftime('%m/%d/%Y'))
                 skip_number = skip_number + 1
@@ -46,11 +47,7 @@ class Integration(object):
                 title = review_info['title']
                 issue_title = self.get_issue_title(title)
 
-                if 'branch' in review_info and status == 1:
-                    branch = review_info['branch']
-                    self.branch_review(review_id, branch)
-
-                elif 'branch' in review_info and status == 2:
+                if 'branch' in review_info and status == 2:
                     branch = review_info['branch']
                     self.update_status(issue_title, 'Ready for Merge')
 
@@ -81,12 +78,6 @@ class Integration(object):
             issue_title = title[title.find('') : title.find(' ')]
 
         return issue_title
-
-    #Change a review to a review for a branch
-    def branch_review(self, review_id, branch):
-        url = self.url_upsource + '~rpc/startBranchTracking'
-        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
-        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Updates issue status
     def update_status(self, issue_title, status):
@@ -139,24 +130,7 @@ class Integration(object):
                 if issue_status == "Ready for Review":
                     revision_id = self.check_review(issue_title)
 
-                    if revision_id != '':
-                        self.create_review(revision_id)
-                        log.info('Review for ' + str(issue_title) + ' created')
-                        
-                        created_review_info = self.review_info(revision_id)
-                        review_id = created_review_info[0]['reviewInfo']['reviewId']['reviewId']
-
-                        self.add_review_label(review_id)
-                        log.info('Label "ready for review" added to review ' + str(issue_title))
-
-                        self.delete_default_reviewer(review_id)
-                        log.info('Default reviewer deleted')
-
-                        self.add_reviewer(review_id, revision_id)
-
-                        self.add_revision_to_review(issue_title, review_id)
-
-                elif issue_status in ['Ready for Test', 'Ready for Merge']:
+                else:
                     revision_id = self.filtered_revision_list(issue_title, 0)
                     review_info = self.review_info(revision_id['revision'][0]['revisionId'])
 
@@ -169,7 +143,7 @@ class Integration(object):
         log.info('Finished creating reviews')
 
     #If there is a review, then revisions are added to this review;
-    #If there is no review, then returns null and the review is created
+    #If there is no review, then create a review
     def check_review(self, issue_title):
         skip_number = 0
         review_info_returned = ''
@@ -177,20 +151,27 @@ class Integration(object):
             revision_id = self.filtered_revision_list(issue_title, skip_number)
 
             if 'revision' in revision_id:
-                review_info = self.review_info(revision_id['revision'][0]['revisionId'])
+                revision = revision_id['revision'][0]
+                review_info = self.review_info(revision['revisionId'])
+                review_status = review_info[0]['reviewInfo']['state']
 
                 if review_info != [{}]:
                     review_id = review_info[0]['reviewInfo']['reviewId']['reviewId']
+
+                    self.branch_review(revision, review_status, review_id)
+
                     self.add_revision_to_review(issue_title, review_id)
+
                     skip_number = None
 
                 else:
-                    review_info_returned = revision_id['revision'][0]['revisionId']
+                    revision_info_returned = revision_id['revision'][0]
+                    self.setting_new_review(revision_info_returned, issue_title)
+
                     skip_number = skip_number + 1
 
             else:
                 skip_number = None
-        return review_info_returned
 
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self, issue, skip_number):
@@ -201,6 +182,38 @@ class Integration(object):
         readble_json = response['result']
         return readble_json
 
+    #Setting new review
+    def setting_new_review(self, revision_info_returned, issue_title):
+        log = self.get_logger()
+        revision_id = revision_info_returned['revisionId']
+        revision = revision_info_returned['revision'][0]
+
+        self.create_review(revision_id)
+        log.info('Review for ' + str(issue_title) + ' created')
+        
+        created_review_info = self.review_info(revision_id)
+        review_id = created_review_info[0]['reviewInfo']['reviewId']['reviewId']
+        review_branche = self.revision_branch(revision_id)
+        review_status = created_review_info[0]['state']
+
+        self.branch_review(revision, review_status, review_id)
+
+        self.add_review_label(review_id)
+        log.info('Label "ready for review" added to review ' + str(issue_title))
+
+        self.delete_default_reviewer(review_id)
+        log.info('Default reviewer deleted')
+
+        self.add_reviewer(review_id, revision_id)
+
+        self.add_revision_to_review(issue_title, review_id)
+
+    #Create review
+    def create_review(self, revision_id):
+        url = self.url_upsource + '~rpc/createReview'
+        data = {"projectId":self.project_name, "revisions":revision_id}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+
     #Returns short review information for a set of revisions
     def review_info(self, revision_id):
         url = self.url_upsource + '~rpc/getRevisionReviewInfo'
@@ -210,11 +223,24 @@ class Integration(object):
         readble_json = response['result']['reviewInfo']
         return readble_json
 
-    #Create review
-    def create_review(self, revision_id):
-        url = self.url_upsource + '~rpc/createReview'
-        data = {"projectId":self.project_name, "revisions":revision_id}
-        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+    #Returns the list of branches a revision is part of
+    def revision_branch(self, revision_id):
+        url = self.url_upsource + '~rpc/getRevisionBranches'
+        data = {"projectId":self.project_name, "revisionId":revision_id}
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        response = answer.json()
+        readble_json = response['result']['branchName']
+        return readble_json
+
+    #Change a review to a review for a branch
+    def branch_review(self, revision, review_status, review_id):
+        if 'branchHeadLabel' in revision:
+            branch = revision['branchHeadLabel'][0]
+
+            if review_status == 1 and branch != 'master':
+                url = self.url_upsource + '~rpc/startBranchTracking'
+                data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
+                requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Adds a label to a review
     def add_review_label(self, review_id):
