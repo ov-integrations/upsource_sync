@@ -1,7 +1,7 @@
 import upsourceIntegration
 import json
 
-with open('SettingsFile.integration.json', "rb") as PFile:
+with open('SettingsFile.integration', "rb") as PFile:
     password_data = json.loads(PFile.read().decode('utf-8'))
 
 url_upsource = password_data["urlUpsource"]
