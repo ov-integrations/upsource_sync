@@ -131,13 +131,14 @@ class Integration(object):
                         self.setting_new_review(review_info_returned , issue_title)
                 else:
                     revision_id = self.filtered_revision_list(issue_title, 0)
-                    review_info = self.review_info(revision_id['revision'][0]['revisionId'])
+                    if 'revision' in revision_id:
+                        review_info = self.review_info(revision_id['revision'][0]['revisionId'])
 
-                    if review_info != [{}]:
-                        review_id = review_info[0]['reviewInfo']['reviewId']['reviewId']
+                        if review_info != [{}]:
+                            review_id = review_info[0]['reviewInfo']['reviewId']['reviewId']
 
-                        self.close_review(review_id)
-                        log.info('Review for ' + str(issue_title) + ' closed')
+                            self.close_review(review_id)
+                            log.info('Review for ' + str(issue_title) + ' closed')
 
         log.info('Finished creating reviews')
 
