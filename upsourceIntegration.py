@@ -20,7 +20,7 @@ class Integration(object):
         self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
         self.auth_onevizion = HTTPBasicAuth(login_onevizion, pass_onevizion)
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
-        
+
         self.create_or_close_review()
         self.update_issue_status()
 
@@ -43,12 +43,10 @@ class Integration(object):
                 skip_number = skip_number + 1
 
                 status = review_info['state']
-                review_id = review_info['reviewId']['reviewId']
                 title = review_info['title']
                 issue_title = self.get_issue_title(title)
 
                 if 'branch' in review_info and status == 2:
-                    branch = review_info['branch']
                     self.update_status(issue_title, 'Ready for Merge')
 
                 elif 'branch' not in review_info and status == 2:
@@ -194,7 +192,6 @@ class Integration(object):
         
         created_review_info = self.review_info(revision_id)
         review_id = created_review_info[0]['reviewInfo']['reviewId']['reviewId']
-        review_branche = self.revision_branch(revision_id)
         review_status = created_review_info[0]['reviewInfo']['state']
 
         self.branch_review(revision, review_status, review_id)
@@ -222,15 +219,6 @@ class Integration(object):
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         response = answer.json()
         readble_json = response['result']['reviewInfo']
-        return readble_json
-
-    #Returns the list of branches a revision is part of
-    def revision_branch(self, revision_id):
-        url = self.url_upsource + '~rpc/getRevisionBranches'
-        data = {"projectId":self.project_name, "revisionId":revision_id}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-        response = answer.json()
-        readble_json = response['result']['branchName']
         return readble_json
 
     #Change a review to a review for a branch
