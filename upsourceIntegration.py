@@ -146,7 +146,6 @@ class Integration(object):
     #If there is no review, then create a review
     def check_review(self, issue_title):
         skip_number = 0
-        review_info_returned = ''
         while skip_number != None:
             revision_id = self.filtered_revision_list(issue_title, skip_number)
 
@@ -154,7 +153,7 @@ class Integration(object):
                 revision = revision_id['revision'][0]
                 review_info = self.review_info(revision['revisionId'])[0]
 
-                if review_info != [{}]:
+                if review_info != {}:
                     review_id = review_info['reviewInfo']['reviewId']['reviewId']
                     self.add_revision_to_review(issue_title, review_id)
 
