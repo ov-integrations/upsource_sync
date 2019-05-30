@@ -139,6 +139,7 @@ class Integration(object):
 
                             self.close_review(review_id)
                             log.info('Review for ' + str(issue_title) + ' closed')
+                            self.delete_review_label(review_id)
 
         log.info('Finished creating reviews')
 
@@ -305,6 +306,14 @@ class Integration(object):
         url = self.url_upsource + '~rpc/closeReview'
         data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "isFlagged":True}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+
+    #Delete a label to a review
+    def delete_review_label(self, review_id):
+        url = self.url_upsource + '~rpc/removeReviewLabel'
+        data = {"projectId":self.project_name, "reviewId":{"projectId":self.project_name, "reviewId":review_id}, "label":{"id":"ready", "name":"ready for review"}}
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        response = answer.json()
+        return response
 
     #Returns logging to stdout
     def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):
