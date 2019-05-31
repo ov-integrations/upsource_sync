@@ -70,7 +70,9 @@ class Integration(object):
     #Returns issue title
     def get_issue_title(self, title):
         if 'Review of ' in title:
-            issue_title = title[title.find('Review of ') : title.find('-',2)]
+            start = title.find('Review of ')
+            finish = title.find('-')
+            issue_title = title[start+10:finish+7]
 
         else:
             issue_title = title[title.find('') : title.find(' ')]
@@ -80,21 +82,23 @@ class Integration(object):
     #Updates issue status
     def update_status(self, issue_title, status):
         log = self.get_logger()
-
         issue = self.check_issue(issue_title)
-        if issue[0]['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
-            url = self.url_onevizion + 'api/v3/trackors/' + str(issue[0]['TRACKOR_ID'])
-            data = {"VQS_IT_STATUS":status}
-            requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
 
-            log.info('Issue ' + issue[0]['TRACKOR_KEY'] + ' updated status to "Ready for Merge"')
+        if issue != []:
 
-        elif issue[0]['VQS_IT_STATUS'] == 'Ready for Review' and status == "Ready for Test":
-            url = self.url_onevizion + 'api/v3/trackors/' + str(issue[0]['TRACKOR_ID'])
-            data = {"VQS_IT_STATUS":status}
-            requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
+            if issue[0]['VQS_IT_STATUS'] == 'Ready for Review' and status == 'Ready for Merge':
+                url = self.url_onevizion + 'api/v3/trackors/' + str(issue[0]['TRACKOR_ID'])
+                data = {"VQS_IT_STATUS":status}
+                requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
 
-            log.info('Issue ' + issue[0]['TRACKOR_KEY'] + ' updated status to "Ready for Test"')
+                log.info('Issue ' + issue[0]['TRACKOR_KEY'] + ' updated status to "Ready for Merge"')
+
+            elif issue[0]['VQS_IT_STATUS'] == 'Ready for Review' and status == "Ready for Test":
+                url = self.url_onevizion + 'api/v3/trackors/' + str(issue[0]['TRACKOR_ID'])
+                data = {"VQS_IT_STATUS":status}
+                requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
+
+                log.info('Issue ' + issue[0]['TRACKOR_KEY'] + ' updated status to "Ready for Test"')
 
     #Checks issue status
     def check_issue(self, issue_title):
