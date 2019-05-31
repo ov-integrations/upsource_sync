@@ -127,23 +127,24 @@ class Integration(object):
             issue_title = issue['TRACKOR_KEY']
             issue_status = issue['VQS_IT_STATUS']
 
-            if issue_status in ['Ready for Review', 'Ready for Test', 'Ready for Merge']:
+            if issue_status == "Ready for Review":
+                review_info_returned  = self.check_review(issue_title)
 
-                if issue_status == "Ready for Review":
-                    review_info_returned  = self.check_review(issue_title)
-                    if review_info_returned  != '':
-                        self.setting_new_review(review_info_returned , issue_title)
-                else:
-                    revision_id = self.filtered_revision_list(issue_title, 0)
-                    if 'revision' in revision_id:
-                        review_info = self.review_info(revision_id['revision'][0]['revisionId'])
+                if review_info_returned  != '':
+                    self.setting_new_review(review_info_returned , issue_title)
 
-                        if review_info != [{}]:
-                            review_id = review_info[0]['reviewInfo']['reviewId']['reviewId']
+            elif issue_status in ['Ready for Test', 'Ready for Merge']:
+                revision_id = self.filtered_revision_list(issue_title, 0)
+                if 'revision' in revision_id:
+                    review_info = self.review_info(revision_id['revision'][0]['revisionId'])
 
-                            self.close_review(review_id)
-                            log.info('Review for ' + str(issue_title) + ' closed')
-                            self.delete_review_label(review_id)
+                    if review_info != [{}]:
+                        review_id = review_info[0]['reviewInfo']['reviewId']['reviewId']
+
+                        self.delete_review_label(review_id)
+
+                        self.close_review(review_id, True)
+                        log.info('Review for ' + str(issue_title) + ' closed')
 
         log.info('Finished creating reviews')
 
@@ -164,7 +165,13 @@ class Integration(object):
                     self.add_revision_to_review(issue_title, review_id)
 
                     review_status = review_info['reviewInfo']['state']
-                    self.branch_review(revision, review_status, review_id)
+
+                    if review_status == 1:
+                        self.branch_review(revision, review_status, review_id)
+
+                    elif review_status == 2:
+                        self.close_review(review_id, False)
+                        self.add_review_label(review_id)
 
                     skip_number = None
 
@@ -313,9 +320,9 @@ class Integration(object):
                 skip_number = None
 
     #Close review
-    def close_review(self, review_id):
+    def close_review(self, review_id, status):
         url = self.url_upsource + '~rpc/closeReview'
-        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "isFlagged":True}
+        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "isFlagged":status}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Delete a label to a review
