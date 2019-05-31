@@ -21,8 +21,9 @@ class Integration(object):
         self.auth_onevizion = HTTPBasicAuth(login_onevizion, pass_onevizion)
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
 
-        self.create_or_close_review()
-        self.update_issue_status()
+        self.get_revision_file_extension("BLNK-CR-107", "5de06f7e6562b385e707b9beee3c559d1a237184")
+        # self.create_or_close_review()
+        # self.update_issue_status()
 
     def update_issue_status(self):
         log = self.get_logger()
@@ -208,7 +209,7 @@ class Integration(object):
         self.delete_default_reviewer(review_id)
         log.info('Default reviewer deleted')
 
-        self.add_reviewer(review_id, revision_id)
+        self.get_revision_file_extension(review_id, revision_id)
 
         self.add_revision_to_review(issue_title, review_id)
 
@@ -253,47 +254,54 @@ class Integration(object):
         response = answer.json()
         return response
 
+    #Returns the list of changes (files that were added, removed, or modified) in a revision
+    def get_revision_file_extension(self, review_id, revision_id):
+        skip_number = 0
+        while skip_number != None:
+            url = self.url_upsource + '~rpc/getRevisionChanges'
+            data = {"revision":{"projectId":self.project_name, "revisionId":revision_id}, "limit":1, "skip":skip_number}
+            answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+            response = answer.json()
+            readble_json = response['result']
+
+            if 'diff' in readble_json:
+                skip_number = skip_number + 1
+                diff_file = readble_json['diff']
+                file_extension = diff_file[0]['fileIcon'][5:]
+                self.add_reviewer(review_id, file_extension)
+
+            else:
+                skip_number = None
+
     #Add a reviewer to the review
-    def add_reviewer(self, review_id, revision_id):
+    def add_reviewer(self, review_id, file_extension):
         log = self.get_logger()
 
         user_id = ""
-        for revision_file_extension in self.get_revision_file_extension(revision_id):
-            file_extension = revision_file_extension['fileIcon'][5:]
 
-            if file_extension == 'sql':
-                user_id = "840cb243-75a1-4bba-8fad-5859779db1df"
-                log.info('Mikhail Knyazev added in reviewers')
+        if file_extension == 'sql':
+            user_id = "840cb243-75a1-4bba-8fad-5859779db1df"
+            log.info('Mikhail Knyazev added in reviewers')
 
-            elif file_extension == 'java':
-                user_id = "c7b9b297-d3e0-4148-af30-df20d676a0fd"
-                log.info('Dmitry Nesmelov added in reviewers')
+        elif file_extension == 'java':
+            user_id = "c7b9b297-d3e0-4148-af30-df20d676a0fd"
+            log.info('Dmitry Nesmelov added in reviewers')
 
-            elif file_extension in ['js', 'css', 'html']:
-                user_id = "9db3e4ca-5167-46b8-b114-5126af78d41c"
-                log.info('Alex Yuzvyak added in reviewers')
+        elif file_extension in ['js', 'css', 'html']:
+            user_id = "9db3e4ca-5167-46b8-b114-5126af78d41c"
+            log.info('Alex Yuzvyak added in reviewers')
 
-            if user_id != "":
-                url = self.url_upsource + '~rpc/addParticipantToReview'
-                data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "participant":{"userId":user_id, "role":2}}
-                requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-
-    #Returns the list of changes (files that were added, removed, or modified) in a revision
-    def get_revision_file_extension(self, revision_id):
-        url = self.url_upsource + '~rpc/getRevisionChanges'
-        data = {"revision":{"projectId":self.project_name, "revisionId":revision_id}, "limit":10}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-        response = answer.json()
-        readble_json = response['result']['diff']
-        unique_file_extension = {file_extension['fileIcon']:file_extension for file_extension in readble_json}.values()
-        return unique_file_extension
+        if user_id != "":
+            url = self.url_upsource + '~rpc/addParticipantToReview'
+            data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "participant":{"userId":user_id, "role":2}}
+            requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Attaches a revision to a review
     def add_revision_to_review(self, issue_title, review_id):
         skip_number = 0
         while skip_number != None:
             revision_list = self.filtered_revision_list(issue_title, skip_number)
-            print(revision_list)
+            
             if 'revision' in revision_list:
                 skip_number = skip_number + 1
                 revision_id = revision_list['revision'][0]['revisionId']
