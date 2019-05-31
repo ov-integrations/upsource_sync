@@ -21,9 +21,8 @@ class Integration(object):
         self.auth_onevizion = HTTPBasicAuth(login_onevizion, pass_onevizion)
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
 
-        self.get_revision_file_extension("BLNK-CR-107", "5de06f7e6562b385e707b9beee3c559d1a237184")
-        # self.create_or_close_review()
-        # self.update_issue_status()
+        self.create_or_close_review()
+        self.update_issue_status()
 
     def update_issue_status(self):
         log = self.get_logger()
