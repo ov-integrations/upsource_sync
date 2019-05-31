@@ -135,6 +135,7 @@ class Integration(object):
 
             elif issue_status in ['Ready for Test', 'Ready for Merge']:
                 revision_id = self.filtered_revision_list(issue_title, 0)
+
                 if 'revision' in revision_id:
                     review_info = self.review_info(revision_id['revision'][0]['revisionId'])
 
@@ -218,6 +219,8 @@ class Integration(object):
         self.get_revision_file_extension(review_id, revision_id)
 
         self.add_revision_to_review(issue_title, review_id)
+
+        self.add_url_to_issue(issue_id, review_id)
 
     #Create review
     def create_review(self, revision_id):
@@ -307,7 +310,7 @@ class Integration(object):
         skip_number = 0
         while skip_number != None:
             revision_list = self.filtered_revision_list(issue_title, skip_number)
-            
+
             if 'revision' in revision_list:
                 skip_number = skip_number + 1
                 revision_id = revision_list['revision'][0]['revisionId']
@@ -318,6 +321,12 @@ class Integration(object):
 
             else:
                 skip_number = None
+
+    #Adds a review url to a issue
+    def add_url_to_issue(self, issue_id, review_id):
+        url = self.url_onevizion + 'api/v3/trackors/' + str(issue_id)
+        data = {"I_CODE_REVIEW":self.url_upsource + self.project_upsource + "/review/" + review_id}
+        requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
 
     #Close review
     def close_review(self, review_id, status):
