@@ -61,7 +61,7 @@ class Integration(object):
     #Returns a list of reviews for the last 30 days
     def get_reviews(self, skip_number):
         url = self.url_upsource + '~rpc/getReviews'
-        data = {"projectId":self.project_name, "limit":1, "skip":skip_number}
+        data = {"projectId":self.project_name, "limit":1, "skip":skip_number, "sortBy":"id,desc"}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         readble_json = answer.json()
         review = readble_json['result']
