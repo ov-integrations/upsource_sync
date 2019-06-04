@@ -144,7 +144,9 @@ class Integration(object):
 
                         self.delete_review_label(review_id)
 
-                        self.close_review(review_id, True)
+                        self.stop_branch_review(review_info, review_id, branch)
+
+                        self.close_or_reopen_review(review_id, True)
                         log.info('Review for ' + str(issue_title) + ' closed')
 
         log.info('Finished creating reviews')
@@ -168,11 +170,14 @@ class Integration(object):
                     review_status = review_info['reviewInfo']['state']
 
                     if review_status == 1:
-                        self.branch_review(revision, review_status, review_id)
+                        self.start_branch_review(revision, review_status, review_id)
 
                     elif review_status == 2:
-                        self.close_review(review_id, False)
+                        self.close_or_reopen_review(review_id, False)
+
                         self.add_review_label(review_id)
+
+                        self.start_branch_review(revision, review_status, review_id)
 
                     skip_number = None
 
@@ -208,7 +213,7 @@ class Integration(object):
         review_id = created_review_info[0]['reviewInfo']['reviewId']['reviewId']
         review_status = created_review_info[0]['reviewInfo']['state']
 
-        self.branch_review(revision, review_status, review_id)
+        self.start_branch_review(revision, review_status, review_id)
 
         self.add_review_label(review_id)
         log.info('Label "ready for review" added to review ' + str(issue_title))
@@ -238,7 +243,7 @@ class Integration(object):
         return readble_json
 
     #Change a review to a review for a branch
-    def branch_review(self, revision, review_status, review_id):
+    def start_branch_review(self, revision, review_status, review_id):
         if 'branchHeadLabel' in revision:
             branch = revision['branchHeadLabel'][0]
 
@@ -246,6 +251,15 @@ class Integration(object):
                 url = self.url_upsource + '~rpc/startBranchTracking'
                 data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
                 requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+
+    #Stops branch tracking for a given review
+    def stop_branch_review(self, review_info, review_id, branch):
+        if 'branch' in review_info:
+            branch = reviewInfo['branch']
+
+            url = self.url_upsource + '~rpc/stopBranchTracking'
+            data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
+            requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Adds a label to a review
     def add_review_label(self, review_id):
@@ -329,7 +343,7 @@ class Integration(object):
         requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
 
     #Close review
-    def close_review(self, review_id, status):
+    def close_or_reopen_review(self, review_id, status):
         url = self.url_upsource + '~rpc/closeReview'
         data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "isFlagged":status}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
