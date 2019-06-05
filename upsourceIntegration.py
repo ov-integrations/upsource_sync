@@ -37,6 +37,7 @@ class Integration(object):
 
             if 'reviews' in review:
                 review_info = review['reviews'][0]
+                review_id = review_info['reviewId']['reviewId']
 
                 created_at = str(review_info['createdAt'])[:-3]
                 create_date = str(datetime.fromtimestamp(int(created_at)).strftime('%m/%d/%Y'))
@@ -46,10 +47,12 @@ class Integration(object):
                 title = review_info['title']
                 issue_title = self.get_issue_title(title)
 
-                if 'branch' in review_info and status == 2:
+                branch_in_review = self.check_branch_review(review_id)
+
+                if branch_in_review != '' and status == 2:
                     self.update_status(issue_title, 'Ready for Merge')
 
-                elif 'branch' not in review_info and status == 2:
+                elif branch_in_review == '' and status == 2:
                     self.update_status(issue_title, 'Ready for Test')
 
             else:
@@ -78,6 +81,24 @@ class Integration(object):
             issue_title = title[title.find('') : title.find(' ')]
 
         return issue_title
+
+    #Сhecks if there is a branch in the review
+    def check_branch_review(self, review_id):
+        skip_number_list = 0
+        branch_in_review = ''
+        while skip_number_list != None:
+            branch_review = self.filtered_revision_list("review: " + str(review_id), skip_number_list)
+
+            if 'revision' in branch_review:
+                skip_number_list = skip_number_list + 1
+                revision_id = branch_review['revision'][0]
+
+                if 'branchHeadLabel' in revision_id:
+                    branch_in_review = revision_id['branchHeadLabel'][0]
+                    break
+            else:
+                skip_number_list = None
+        return branch_in_review
 
     #Updates issue status
     def update_status(self, issue_title, status):
@@ -179,9 +200,9 @@ class Integration(object):
         return review_info_returned 
 
     #Returns the list of revisions that match the given search query
-    def filtered_revision_list(self, issue, skip_number):
+    def filtered_revision_list(self, query, skip_number):
         url = self.url_upsource + '~rpc/getRevisionsListFiltered'
-        data = {"projectId":self.project_name, "limit":1, "query":issue, "skip":skip_number}
+        data = {"projectId":self.project_name, "limit":1, "query":query, "skip":skip_number}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         response = answer.json()
         readble_json = response['result']
@@ -300,7 +321,7 @@ class Integration(object):
         skip_number = 0
         while skip_number != None:
             revision_list = self.filtered_revision_list(issue_title, skip_number)
-            
+
             if 'revision' in revision_list:
                 skip_number = skip_number + 1
                 revision_id = revision_list['revision'][0]['revisionId']
