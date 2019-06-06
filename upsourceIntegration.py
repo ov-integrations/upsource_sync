@@ -167,7 +167,7 @@ class Integration(object):
                         self.delete_review_label(review_id, 'ready', 'ready for review')
                         self.delete_review_label(review_id, '1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
-                        self.stop_branch_review(review_info, review_id, branch)
+                        self.stop_branch_review(review_info, review_id)
 
                         self.close_or_reopen_review(review_id, True)
                         log.info('Review for ' + str(issue_title) + ' closed')
@@ -278,7 +278,7 @@ class Integration(object):
                 requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Stops branch tracking for a given review
-    def stop_branch_review(self, review_info, review_id, branch):
+    def stop_branch_review(self, review_info, review_id):
         if 'branch' in review_info:
             branch = reviewInfo['branch']
 
