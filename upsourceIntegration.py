@@ -125,7 +125,7 @@ class Integration(object):
     def check_issue(self, issue_title):
         if issue_title == '':
             url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-            data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS", "Product.TRACKOR_KEY":self.project_onevizion}
+            data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_REL_DATE", "Product.TRACKOR_KEY":self.project_onevizion}
             answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
             response = answer.json()
             return response
@@ -147,12 +147,13 @@ class Integration(object):
         for issue in self.check_issue(''):
             issue_title = issue['TRACKOR_KEY']
             issue_status = issue['VQS_IT_STATUS']
+            issue_version_date = issue['Version.VER_REL_DATE']
 
             if issue_status == "Ready for Review":
-                review_info_returned  = self.check_review(issue_title)
+                review_info_returned  = self.check_review(issue_title, issue_version_date)
 
                 if review_info_returned  != '':
-                    self.setting_new_review(review_info_returned , issue_title)
+                    self.setting_new_review(review_info_returned, issue_title, issue_version_date)
 
             elif issue_status in ['Ready for Test', 'Ready for Merge']:
                 revision_id = self.filtered_revision_list(issue_title, 0)
@@ -163,7 +164,8 @@ class Integration(object):
                     if review_info != [{}]:
                         review_id = review_info[0]['reviewInfo']['reviewId']['reviewId']
 
-                        self.delete_review_label(review_id)
+                        self.delete_review_label(review_id, 'ready', 'ready for review')
+                        self.delete_review_label(review_id, '1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
                         self.stop_branch_review(review_info, review_id, branch)
 
@@ -174,7 +176,7 @@ class Integration(object):
 
     #If there is a review, then revisions are added to this review;
     #If there is no review, then create a review
-    def check_review(self, issue_title):
+    def check_review(self, issue_title, issue_version_date):
         skip_number = 0
         review_info_returned  = ''
         while skip_number != None:
@@ -193,10 +195,12 @@ class Integration(object):
                     if review_status == 1:
                         self.start_branch_review(revision, review_status, review_id)
 
+                        self.current_release_label(review_id, issue_version_date)
+
                     elif review_status == 2:
                         self.close_or_reopen_review(review_id, False)
 
-                        self.add_review_label(review_id)
+                        self.add_review_label(review_id, 'ready', 'ready for review')
 
                         self.start_branch_review(revision, review_status, review_id)
 
@@ -222,7 +226,7 @@ class Integration(object):
         return readble_json
 
     #Setting new review
-    def setting_new_review(self, review_info_returned , issue_title):
+    def setting_new_review(self, review_info_returned , issue_title, issue_version_date):
         log = self.get_logger()
         revision_id = review_info_returned ['revisionId']
         revision = review_info_returned 
@@ -236,11 +240,11 @@ class Integration(object):
 
         self.start_branch_review(revision, review_status, review_id)
 
-        self.add_review_label(review_id)
-        log.info('Label "ready for review" added to review ' + str(issue_title))
+        self.current_release_label(review_id, issue_version_date)
 
-        self.delete_default_reviewer(review_id)
-        log.info('Default reviewer deleted')
+        self.add_review_label(review_id, 'ready', 'ready for review')
+
+        self.delete_default_reviewer(review_id) 
 
         self.get_revision_file_extension(review_id, revision_id)
 
@@ -282,10 +286,24 @@ class Integration(object):
             data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
             requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
+    #Checks release date and adds or removes label
+    def current_release_label(self, review_id, issue_version_date):
+        sysdate = datetime.now()
+        datetime_object = datetime.strptime(issue_version_date, '%Y-%m-%d')
+
+        current_release = str((datetime_object - timedelta(days=4)).strftime('%m/%d/%Y'))
+        
+        if current_release > str(sysdate.strftime('%m/%d/%Y')):
+            add_review_label(review_id, '1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
+
+        elif current_release <= str(sysdate.strftime('%m/%d/%Y')):
+            delete_review_label(review_id, '1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
+
     #Adds a label to a review
-    def add_review_label(self, review_id):
+    def add_review_label(self, review_id, label_id, label_name):
         url = self.url_upsource + '~rpc/addReviewLabel'
-        data = {"projectId":self.project_name, "reviewId":{"projectId":self.project_name, "reviewId":review_id}, "label":{"id":"ready", "name":"ready for review"}}
+        data = {"projectId":self.project_name, "reviewId":{"projectId":self.project_name, "reviewId":review_id}, 
+        "label":{"id":label_id, "name":label_name}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         response = answer.json()
         return response
@@ -370,9 +388,9 @@ class Integration(object):
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Delete a label to a review
-    def delete_review_label(self, review_id):
+    def delete_review_label(self, review_id, label_id, label_name):
         url = self.url_upsource + '~rpc/removeReviewLabel'
-        data = {"projectId":self.project_name, "reviewId":{"projectId":self.project_name, "reviewId":review_id}, "label":{"id":"ready", "name":"ready for review"}}
+        data = {"projectId":self.project_name, "reviewId":{"projectId":self.project_name, "reviewId":review_id}, "label":{"id":label_id, "name":label_name}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         response = answer.json()
         return response
