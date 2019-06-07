@@ -94,8 +94,10 @@ class Integration(object):
                 revision_id = branch_review['revision'][0]
 
                 if 'branchHeadLabel' in revision_id:
-                    branch_in_review = revision_id['branchHeadLabel'][0]
-                    break
+                    if revision_id['branchHeadLabel'][0] != 'master':
+                        branch_in_review = revision_id['branchHeadLabel'][0]
+                        break
+
             else:
                 skip_number_list = None
         return branch_in_review
