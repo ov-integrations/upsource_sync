@@ -49,6 +49,20 @@ class Integration(object):
 
                 branch_in_review = self.check_branch_review(review_id)
 
+                updated_at = str(review_info['updatedAt'])[:-3]
+                update_date = str(datetime.fromtimestamp(int(updated_at)).strftime('%m/%d/%Y %H:%M'))
+                current_day = str(sysdate.strftime('%m/%d/%Y %H:%M'))
+                current_day_datetime = datetime.strptime(current_day, '%m/%d/%Y %H:%M')
+                previous_hours = str((current_day_datetime - timedelta(hours=1)).strftime('%m/%d/%Y %H:%M'))
+
+                if previous_hours >= update_date and status == 2:
+                    self.close_or_reopen_review(review_id, False)
+
+                    self.add_review_label(review_id, 'ready', 'ready for review')
+
+                    if branch_in_review != '':
+                        self.start_branch_review(review_id, branch_in_review)
+
                 if branch_in_review != '' and status == 2:
                     self.update_status(issue_title, 'Ready for Merge')
 
@@ -193,16 +207,13 @@ class Integration(object):
                     review_status = review_info['reviewInfo']['state']
 
                     if review_status == 1:
-                        self.start_branch_review(revision, review_status, review_id)
-
                         self.current_release_label(review_id, issue_version_date)
 
-                    elif review_status == 2:
-                        self.close_or_reopen_review(review_id, False)
+                        if 'branchHeadLabel' in revision:
+                            branch = revision['branchHeadLabel'][0]
 
-                        self.add_review_label(review_id, 'ready', 'ready for review')
-
-                        self.start_branch_review(revision, review_status, review_id)
+                            if branch != 'master':
+                                self.start_branch_review(review_id, branch)
 
                     skip_number = None
 
@@ -229,7 +240,7 @@ class Integration(object):
     def setting_new_review(self, review_info_returned , issue_title, issue_version_date):
         log = self.get_logger()
         revision_id = review_info_returned ['revisionId']
-        revision = review_info_returned 
+        revision = review_info_returned
 
         self.create_review(revision_id)
         log.info('Review for ' + str(issue_title) + ' created')
@@ -238,7 +249,11 @@ class Integration(object):
         review_id = created_review_info[0]['reviewInfo']['reviewId']['reviewId']
         review_status = created_review_info[0]['reviewInfo']['state']
 
-        self.start_branch_review(revision, review_status, review_id)
+        if 'branchHeadLabel' in revision:
+            branch = revision['branchHeadLabel'][0]
+
+            if review_status == 1 and branch != 'master':
+                self.start_branch_review(review_id, branch)
 
         self.current_release_label(review_id, issue_version_date)
 
@@ -268,14 +283,10 @@ class Integration(object):
         return readble_json
 
     #Change a review to a review for a branch
-    def start_branch_review(self, revision, review_status, review_id):
-        if 'branchHeadLabel' in revision:
-            branch = revision['branchHeadLabel'][0]
-
-            if review_status == 1 and branch != 'master':
-                url = self.url_upsource + '~rpc/startBranchTracking'
-                data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
-                requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+    def start_branch_review(self, review_id, branch):
+        url = self.url_upsource + '~rpc/startBranchTracking'
+        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Stops branch tracking for a given review
     def stop_branch_review(self, review_info, review_id):
