@@ -108,8 +108,10 @@ class Integration(object):
                 revision_id = branch_review['revision'][0]
 
                 if 'branchHeadLabel' in revision_id:
-                    if revision_id['branchHeadLabel'][0] != 'master':
-                        branch_in_review = revision_id['branchHeadLabel'][0]
+                    branch = revision_id['branchHeadLabel'][0]
+
+                    if branch != 'master':
+                        branch_in_review = branch
                         break
 
             else:
