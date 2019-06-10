@@ -201,7 +201,7 @@ class Integration(object):
             else:
                 skip_number = None
 
-        return review_info_returned 
+        return review_info_returned
 
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self, query, skip_number):
@@ -334,6 +334,7 @@ class Integration(object):
                 data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "revisionId":revision_id}
                 requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
+                self.get_revision_file_extension(review_id, revision_id)
             else:
                 skip_number = None
 
