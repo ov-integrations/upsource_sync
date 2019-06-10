@@ -364,7 +364,7 @@ class Integration(object):
             user_id = "c7b9b297-d3e0-4148-af30-df20d676a0fd"
             log.info('Dmitry Nesmelov added in reviewers')
 
-        elif file_extension in ['js', 'css', 'html']:
+        elif file_extension in ['js', 'css', 'html', 'jsp', 'tag']:
             user_id = "9db3e4ca-5167-46b8-b114-5126af78d41c"
             log.info('Alex Yuzvyak added in reviewers')
 
