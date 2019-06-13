@@ -47,6 +47,9 @@ class Integration(object):
                 title = review_info['title']
                 issue_title = self.get_issue_title(title)
 
+                issue = self.check_issue(issue_title)
+                issue_status = issue['VQS_IT_STATUS']
+
                 branch_in_review = self.check_branch_review(review_id)
 
                 updated_at = str(review_info['updatedAt'])[:-3]
@@ -55,7 +58,7 @@ class Integration(object):
                 current_day_datetime = datetime.strptime(current_day, '%m/%d/%Y %H:%M')
                 previous_hours = str((current_day_datetime - timedelta(hours=1)).strftime('%m/%d/%Y %H:%M'))
 
-                if previous_hours >= update_date and status == 2:
+                if previous_hours >= update_date and issue_status == 'Ready for Review' and status == 2:
                     self.close_or_reopen_review(review_id, False)
 
                     self.add_review_label(review_id, 'ready', 'ready for review')
