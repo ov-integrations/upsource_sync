@@ -74,22 +74,23 @@ class Integration(object):
 
         if 'revision' in revision_id:
             review_info = self.review_info(revision_id['revision'][0]['revisionId'])
-            review = review_info[0]['reviewInfo']
-            status = review['state']
+            if 'review_info' in review_info:
+                review = review_info[0]['reviewInfo']
+                status = review['state']
 
-            if review_info != [{}] and status != 2:
-                review_id = review['reviewId']['reviewId']
+                if review_info != [{}] and status != 2:
+                    review_id = review['reviewId']['reviewId']
 
-                if 'labels' in review:
-                    labels = review['labels']
+                    if 'labels' in review:
+                        labels = review['labels']
 
-                    for label in labels:
-                        self.delete_review_label(review_id, label['id'], label['name'])
+                        for label in labels:
+                            self.delete_review_label(review_id, label['id'], label['name'])
 
-                self.stop_branch_tracking(review_info, review_id)
-                self.close_or_reopen_review(review_id, True)
+                    self.stop_branch_tracking(review_info, review_id)
+                    self.close_or_reopen_review(review_id, True)
 
-                log.info('Review for ' + str(issue_title) + ' closed')
+                    log.info('Review for ' + str(issue_title) + ' closed')
 
     #Setting the review if the status = 1;
     #Updates task status if status = 2
@@ -237,7 +238,7 @@ class Integration(object):
     def check_issue(self, issue_title):
         if issue_title == '':
             url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-            data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS", "Product.TRACKOR_KEY":self.project_onevizion}
+            data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS", "VQS_IT_STATUS":{"Ready for Review", "Ready for Test", "Ready for Merge"},"Product.TRACKOR_KEY":self.project_onevizion}
             answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
             response = answer.json()
             return response
