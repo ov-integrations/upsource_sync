@@ -129,17 +129,17 @@ class Integration(object):
                     revision_info = revision['revision'][0]
                     revision_id = revision_info['revisionId']
 
-                    # if 'branchHeadLabel' in revision_info:
-                    #     branch_in_review = revision_info['branchHeadLabel'][0]
+                    if 'branchHeadLabel' in revision_info:
+                        branch_in_review = revision_info['branchHeadLabel'][0]
 
-                    # else:
-                    #     branch_in_review = 'master'
+                    else:
+                        branch_in_review = 'master'
 
-                    # if review_status == 1:
-                    #     self.setting_review(revision_id, issue_title, issue_version_date, branch_in_review, participants)
+                    if review_status == 1:
+                        self.setting_review(revision_id, issue_title, issue_version_date, branch_in_review, participants)
 
-                    # elif review_status == 2:
-                    #     self.update_issue_status(review_id, review_updated_at, issue_status, issue_title, branch_in_review)
+                    elif review_status == 2:
+                        self.update_issue_status(review_id, review_updated_at, issue_status, issue_title, branch_in_review)
 
             else:
                 break
