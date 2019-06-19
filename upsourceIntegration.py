@@ -124,20 +124,22 @@ class Integration(object):
                 issue_version_date = issue[0]['Version.VER_REL_DATE']
 
                 revision = self.filtered_revision_list("review: " + str(review_id), 0)
-                revision_info = revision['revision'][0]
-                revision_id = revision_info['revisionId']
 
-                if 'branchHeadLabel' in revision_info:
-                    branch_in_review = revision_info['branchHeadLabel'][0]
+                if 'revision' in revision:
+                    revision_info = revision['revision'][0]
+                    revision_id = revision_info['revisionId']
 
-                else:
-                    branch_in_review = 'master'
+                    # if 'branchHeadLabel' in revision_info:
+                    #     branch_in_review = revision_info['branchHeadLabel'][0]
 
-                if review_status == 1:
-                    self.setting_review(revision_id, issue_title, issue_version_date, branch_in_review, participants)
+                    # else:
+                    #     branch_in_review = 'master'
 
-                elif review_status == 2:
-                    self.update_issue_status(review_id, review_updated_at, issue_status, issue_title, branch_in_review)
+                    # if review_status == 1:
+                    #     self.setting_review(revision_id, issue_title, issue_version_date, branch_in_review, participants)
+
+                    # elif review_status == 2:
+                    #     self.update_issue_status(review_id, review_updated_at, issue_status, issue_title, branch_in_review)
 
             else:
                 break
@@ -238,7 +240,7 @@ class Integration(object):
     def check_issue(self, issue_title):
         if issue_title == '':
             url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-            data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS", "VQS_IT_STATUS":{"Ready for Review", "Ready for Test", "Ready for Merge"},"Product.TRACKOR_KEY":self.project_onevizion}
+            data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS", "Product.TRACKOR_KEY":self.project_onevizion, "VQS_IT_STATUS":{"Ready for Review", "Ready for Test", "Ready for Merge"}}
             answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
             response = answer.json()
             return response
