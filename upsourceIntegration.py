@@ -39,8 +39,15 @@ class Integration(object):
             issue_title = issue['TRACKOR_KEY']
             issue_version_date = issue['Version.VER_REL_DATE']
 
-            revision = self.filtered_revision_list(issue_title)
-            revision_id = revision[0]['revisionId']
+            revisions = self.filtered_revision_list(issue_title)
+            for revision in revisions:
+                if 'revisionCommitMessage' in revision:
+                    revision_title = revision['revisionCommitMessage']
+
+                    if 'Merge ' not in revision_title:
+                        revision_id = revision['revisionId']
+                        break
+
             review = self.review_info(revision_id)
 
             if review == [{}]:
@@ -49,7 +56,7 @@ class Integration(object):
 
             self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
 
-        self.check_reviews()
+        self.check_rseviews()
 
         self.log.info('Finished upsource integration')
 
