@@ -63,11 +63,19 @@ class Integration(object):
 
     #Checks issue status
     def check_issue(self, status, issue):
-        url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-        data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_REL_DATE", "Product.TRACKOR_KEY":self.project_onevizion, "VQS_IT_STATUS":status, "TRACKOR_KEY":issue}
-        answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
-        response = answer.json()
-        return response
+        if status == '':
+            url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
+            data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_REL_DATE", "Product.TRACKOR_KEY":self.project_onevizion, "TRACKOR_KEY":issue}
+            answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
+            response = answer.json()
+            return response
+
+        elif issue == '':
+            url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
+            data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_REL_DATE", "Product.TRACKOR_KEY":self.project_onevizion, "VQS_IT_STATUS":status}
+            answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
+            response = answer.json()
+            return response
 
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self, query):
