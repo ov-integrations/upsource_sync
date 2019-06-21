@@ -26,12 +26,12 @@ class Integration(object):
         self.previous_time = str((current_day_datetime - timedelta(minutes=15)).strftime('%m/%d/%Y %H:%M'))
         self.sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
 
+        self.log = self.get_logger()
+
         self.start_integration()
 
     def start_integration(self):
-        log = self.get_logger()
-
-        log.info('Started upsource integration')
+        self.log.info('Started upsource integration')
 
         issue_list = self.check_issue('Ready for Review', '')
         for issue in issue_list:
@@ -45,13 +45,13 @@ class Integration(object):
 
             if review == [{}]:
                 self.create_review(revision_id, issue_id)
-                log.info('Review for ' + str(issue_title) + ' created')
+                self.log.info('Review for ' + str(issue_title) + ' created')
 
             self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
 
         self.check_reviews()
 
-        log.info('Finished upsource integration')
+        self.log.info('Finished upsource integration')
 
     #Checks issue status
     def check_issue(self, status, issue):
@@ -106,8 +106,6 @@ class Integration(object):
 
     #Setting review
     def setting_review(self, issue_id, issue_title, issue_version_date, revision_id, review):
-        log = self.get_logger()
-
         review_info = review[0]['reviewInfo']
         review_status = review_info['state']
         review_id = review_info['reviewId']['reviewId']
@@ -122,7 +120,9 @@ class Integration(object):
             self.add_revision_to_review(review_id, issue_title)
             self.setting_participants(review_participants, review_id, revision_id)
             self.setting_branch_tracking(review_data, review_id)
-            self.setting_current_release_label(issue_version_date, review_id)
+
+            if issue_version_date != None:
+                self.setting_current_release_label(issue_version_date, review_id)
 
         elif review_status == 2:
             review_updated_at = str(review_data[0]['updatedAt'])[:-3]
@@ -139,7 +139,7 @@ class Integration(object):
                 if branch_in_review != 'master':
                     self.start_branch_tracking(review_id, branch_in_review)
 
-                log.info('Review' + str(review_id) + ' reopened')
+                self.log.info('Review' + str(review_id) + ' reopened')
             else:
 
                 if 'labels' in review_data:
@@ -218,22 +218,20 @@ class Integration(object):
 
     #Add a reviewer to the review
     def add_reviewer(self, review_id, file_list, author_id):
-        log = self.get_logger()
-
         user_id = ""
 
         for file_extension in file_list:
             if file_extension == 'sql':
                 user_id = "840cb243-75a1-4bba-8fad-5859779db1df"
-                log.info('Mikhail Knyazev added in reviewers')
+                self.log.info('Mikhail Knyazev added in reviewers')
 
             elif file_extension == 'java':
                 user_id = "c7b9b297-d3e0-4148-af30-df20d676a0fd"
-                log.info('Dmitry Nesmelov added in reviewers')
+                self.log.info('Dmitry Nesmelov added in reviewers')
 
             elif file_extension in ['js', 'css', 'html', 'jsp', 'tag']:
                 user_id = "9db3e4ca-5167-46b8-b114-5126af78d41c"
-                log.info('Alex Yuzvyak added in reviewers')
+                self.log.info('Alex Yuzvyak added in reviewers')
 
             if user_id not in ["", author_id]:
                 url = self.url_upsource + '~rpc/addParticipantToReview'
@@ -284,13 +282,11 @@ class Integration(object):
 
     #Updates issue status
     def update_status(self, issue_id, issue_title, status):
-        log = self.get_logger()
-
         url = self.url_onevizion + 'api/v3/trackors/' + str(issue_id)
         data = {"VQS_IT_STATUS":status}
         requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
 
-        log.info('Issue ' + str(issue_title) + ' updated status to ' + str(status))
+        self.log.info('Issue ' + str(issue_title) + ' updated status to ' + str(status))
 
     #Stops branch tracking for a given review
     def stop_branch_tracking(self, branch, review_id):
@@ -321,7 +317,7 @@ class Integration(object):
                     branch_in_review = review_data[0]['branch']
                     self.stop_branch_tracking(branch_in_review, review_id)
 
-                log.info('Review ' + str(review_id) + ' closed')
+                self.log.info('Review ' + str(review_id) + ' closed')
 
             elif issue_status == 'In Progress':
                 self.add_review_label(review_id, 'WIP', 'work in progress')
