@@ -51,10 +51,11 @@ class Integration(object):
             review = self.review_info(revision_id)
 
             if review == [{}]:
-                self.create_review(revision_id, issue_id)
+                self.create_review(revision_id, issue_id, issue_title, issue_version_date)
                 self.log.info('Review for ' + str(issue_title) + ' created')
 
-            self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
+            if review != [{}]:
+                self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
 
         self.check_rseviews()
 
@@ -87,7 +88,7 @@ class Integration(object):
         return readble_json
 
     #Create review
-    def create_review(self, revision_id, issue_id):
+    def create_review(self, revision_id, issue_id, issue_title, issue_version_date):
         url = self.url_upsource + '~rpc/createReview'
         data = {"projectId":self.project_name, "revisions":revision_id}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
@@ -98,6 +99,8 @@ class Integration(object):
         self.add_review_label(review_id, 'ready', 'ready for review')
         self.delete_default_reviewer(review_id)
         self.add_url_to_issue(issue_id, review_id)
+
+        self.setting_review(issue_id, issue_title, issue_version_date, revision_id, created_review)
 
     #Removes a default reviewer from a review
     def delete_default_reviewer(self, review_id):
