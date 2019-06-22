@@ -59,7 +59,7 @@ class Integration(object):
             if review != [{}]:
                 self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
 
-        self.check_rseviews()
+        self.check_reviews()
 
         self.log.info('Finished upsource integration')
 
