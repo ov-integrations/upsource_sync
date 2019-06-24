@@ -37,6 +37,7 @@ class Integration(object):
             issue_version_date = issue['Version.VER_REL_DATE']
 
             review = self.get_reviews(issue_title)
+
             revisions = self.filtered_revision_list(issue_title)
             for revision in revisions:
                 if 'revisionCommitMessage' in revision:
@@ -46,11 +47,11 @@ class Integration(object):
                         revision_id = revision['revisionId']
                         break
 
-            if review == [{}]:
+            if 'reviewId' not in review:
                 self.create_review(revision_id, issue_id, issue_title, issue_version_date)
                 self.log.info('Review for ' + str(issue_title) + ' created')
 
-            if review != [{}]:
+            else:
                 self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
 
         self.check_open_reviews()
@@ -75,23 +76,14 @@ class Integration(object):
         readble_json = response['result']['revision']
         return readble_json
 
-    #Returns short review information for a set of revisions
-    def review_info(self, revision_id):
-        url = self.url_upsource + '~rpc/getRevisionReviewInfo'
-        data = {"projectId":self.project_name, "revisionId":revision_id}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-        response = answer.json()
-        readble_json = response['result']['reviewInfo']
-        return readble_json
-
     #Create review
     def create_review(self, revision_id, issue_id, issue_title, issue_version_date):
         url = self.url_upsource + '~rpc/createReview'
         data = {"projectId":self.project_name, "revisions":revision_id}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
-        created_review = self.review_info(revision_id)
-        review_id = created_review[0]['reviewInfo']['reviewId']['reviewId']
+        created_review = self.get_reviews(issue_title)
+        review_id = created_review[0]['reviewId']['reviewId']
 
         self.add_review_label(review_id, 'ready', 'ready for review')
         self.delete_default_reviewer(review_id)
@@ -163,8 +155,12 @@ class Integration(object):
         data = {"projectId":self.project_name, "limit":100, "query":query}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         readble_json = answer.json()
-        review = readble_json['result']['reviews']
-        return review
+        review = readble_json
+        if 'reviews' in readble_json['result']:
+            review = review['result']['reviews']
+            return review
+        else:
+            return review
 
     #Attaches a revision to a review
     def add_revision_to_review(self, review_id, issue_title):
