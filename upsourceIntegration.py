@@ -36,6 +36,7 @@ class Integration(object):
             issue_title = issue['TRACKOR_KEY']
             issue_version_date = issue['Version.VER_REL_DATE']
 
+            review = self.get_reviews(issue_title)
             revisions = self.filtered_revision_list(issue_title)
             for revision in revisions:
                 if 'revisionCommitMessage' in revision:
@@ -44,8 +45,6 @@ class Integration(object):
                     if 'Merge ' not in revision_title:
                         revision_id = revision['revisionId']
                         break
-
-            review = self.review_info(revision_id)
 
             if review == [{}]:
                 self.create_review(revision_id, issue_id, issue_title, issue_version_date)
@@ -114,31 +113,26 @@ class Integration(object):
 
     #Setting review
     def setting_review(self, issue_id, issue_title, issue_version_date, revision_id, review):
-        review_info = review[0]['reviewInfo']
-        review_status = review_info['state']
-        review_id = review_info['reviewId']['reviewId']
-
-        review_data = self.get_reviews(review_id)
-        review_updated_at = str(review_data[0]['updatedAt'])[:-3]
-        update_date = str(datetime.fromtimestamp(int(review_updated_at)).strftime('%m/%d/%Y %H:%M'))
+        review_status = review[0]['state']
+        review_id = review[0]['reviewId']['reviewId']
 
         if review_status == 1:
-            review_participants = review_data[0]['participants']
+            review_participants = review[0]['participants']
 
             self.add_revision_to_review(review_id, issue_title)
             self.setting_participants(review_participants, review_id, revision_id)
-            self.setting_branch_tracking(review_data, review_id)
+            self.setting_branch_tracking(review, review_id)
 
             if issue_version_date != None:
                 self.setting_current_release_label(issue_version_date, review_id)
 
         elif review_status == 2:
-            review_updated_at = str(review_data[0]['updatedAt'])[:-3]
+            review_updated_at = str(review[0]['updatedAt'])[:-3]
             update_date = str(datetime.fromtimestamp(int(review_updated_at)).strftime('%m/%d/%Y %H:%M'))
 
             branch_in_review = 'master'
-            if 'branch' in review_data:
-                branch_in_review = review_data[0]['branch']
+            if 'branch' in review:
+                branch_in_review = review[0]['branch']
 
             if self.previous_time >= update_date:
                 self.close_or_reopen_review(review_id, False)
@@ -150,8 +144,8 @@ class Integration(object):
                 self.log.info('Review' + str(review_id) + ' reopened')
 
             else:
-                if 'labels' in review_data:
-                    review_labels = review_data[0]['labels']
+                if 'labels' in review:
+                    review_labels = review[0]['labels']
 
                     for label in review_labels:
                         self.delete_review_label(review_id, label['id'], label['name'])
@@ -249,7 +243,7 @@ class Integration(object):
     #Start branch tracking if review in a branch
     def setting_branch_tracking(self, review_data, review_id):
         if 'branch' in review_data:
-            review_branch = review_data['branch']
+            review_branch = review_data[0]['branch']
             self.start_branch_tracking(review_id, review_branch)
 
     #Change a review to a review for a branch
