@@ -59,7 +59,8 @@ class Integration(object):
             if review != [{}]:
                 self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
 
-        self.check_reviews()
+        self.check_open_reviews()
+        self.check_closed_reviews()
 
         self.log.info('Finished upsource integration')
 
@@ -315,7 +316,7 @@ class Integration(object):
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Close review if issue status = Ready for Test/Merge
-    def check_reviews(self):
+    def check_open_reviews(self):
         review_list = self.get_reviews('state: open')
         for review_data in review_list:
             review_title = review_data['title']
@@ -358,6 +359,49 @@ class Integration(object):
             issue_title = title[title.find('') : title.find(' ')]
 
         return issue_title
+
+    #Removes labels from closed reviews and stop branch tracking
+    def check_closed_reviews(self):
+        labels_list = self.get_review_labels()
+
+        label_names = ''
+        for label in labels_list['predefinedLabels']:
+            label_names = label_names + '{' + label['name'] + '}' + ','
+
+        for label in labels_list['customLabels']:
+            label_names = label_names + '{' + label['name'] + '}' + ','
+
+        review_list = self.get_reviews('label: ' + label_names[:-1])
+        for review_data in review_list:
+            review_id = review_data['reviewId']['reviewId']
+            review_status = review_data['state']
+
+            if review_status == 2:
+                review = self.get_reviews(review_id)[0]
+
+                if 'labels' in review:
+                    review_labels = review_data['labels']
+
+                    for label in review_labels:
+                        self.delete_review_label(review_id, label['id'], label['name'])
+
+        review_list = self.get_reviews('#track')
+        for review_data in review_list:
+            review_id = review_data['reviewId']['reviewId']
+            review_status = review_data['state']
+
+            if review_status == 2:
+                if 'branch' in review_data:
+                    branch_in_review = review_data['branch']
+                    self.stop_branch_tracking(branch_in_review, review_id)
+
+    def get_review_labels(self):
+        url = self.url_upsource + '~rpc/getReviewLabels'
+        data = {"projectId":self.project_name}
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        response = answer.json()
+        readble_json = response['result']
+        return readble_json
 
     #Returns logging to stdout
     def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):
