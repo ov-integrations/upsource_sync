@@ -10,13 +10,9 @@ class Integration(object):
     def __init__(self, url_upsource="", login_upsource="", pass_upsource="", url_onevizion="", login_onevizion="", pass_onevizion="", project_name="", project_onevizion=""):
         self.url_upsource = url_upsource
         self.url_onevizion = url_onevizion
-        self.login_onevizion = login_onevizion
-        self.pass_onevizion = pass_onevizion
         self.project_name = project_name
         self.project_onevizion = project_onevizion
 
-        login_upsource = login_upsource
-        pass_upsource = pass_upsource
         self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
         self.auth_onevizion = HTTPBasicAuth(login_onevizion, pass_onevizion)
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
@@ -34,7 +30,6 @@ class Integration(object):
         self.log.info('Started upsource integration')
 
         issue_list = self.check_issue('Ready for Review', '')
-        self.log.debug(issue_list)
 
         for issue in issue_list:
             issue_id = issue['TRACKOR_ID']
@@ -66,19 +61,11 @@ class Integration(object):
 
     #Checks issue status
     def check_issue(self, status, issue):
-        if status == '':
-            url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-            data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_REL_DATE", "Product.TRACKOR_KEY":self.project_onevizion, "TRACKOR_KEY":issue}
-            answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
-            response = answer.json()
-            return response
-
-        elif issue == '':
-            url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-            data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_REL_DATE", "Product.TRACKOR_KEY":self.project_onevizion, "VQS_IT_STATUS":status}
-            answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
-            response = answer.json()
-            return response
+        url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
+        data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_REL_DATE", "Product.TRACKOR_KEY":self.project_onevizion, "VQS_IT_STATUS":status, "TRACKOR_KEY":issue}
+        answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
+        response = answer.json()
+        return response
 
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self, query):
@@ -161,8 +148,8 @@ class Integration(object):
                     self.start_branch_tracking(review_id, branch_in_review)
 
                 self.log.info('Review' + str(review_id) + ' reopened')
-            else:
 
+            else:
                 if 'labels' in review_data:
                     review_labels = review_data[0]['labels']
 
@@ -376,24 +363,20 @@ class Integration(object):
             review_id = review_data['reviewId']['reviewId']
             review_status = review_data['state']
 
-            if review_status == 2:
-                review = self.get_reviews(review_id)[0]
+            if review_status == 2 and 'labels' in review_data:
+                review_labels = review_data['labels']
 
-                if 'labels' in review:
-                    review_labels = review_data['labels']
-
-                    for label in review_labels:
-                        self.delete_review_label(review_id, label['id'], label['name'])
+                for label in review_labels:
+                    self.delete_review_label(review_id, label['id'], label['name'])
 
         review_list = self.get_reviews('#track')
         for review_data in review_list:
             review_id = review_data['reviewId']['reviewId']
             review_status = review_data['state']
 
-            if review_status == 2:
-                if 'branch' in review_data:
-                    branch_in_review = review_data['branch']
-                    self.stop_branch_tracking(branch_in_review, review_id)
+            if review_status == 2 and 'branch' in review_data:
+                branch_in_review = review_data['branch']
+                self.stop_branch_tracking(branch_in_review, review_id)
 
     def get_review_labels(self):
         url = self.url_upsource + '~rpc/getReviewLabels'
