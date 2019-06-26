@@ -47,12 +47,14 @@ class Integration(object):
                         revision_id = revision['revisionId']
                         break
 
-            if 'reviewId' not in review[0]:
-                self.create_review(revision_id, issue_id, issue_title, issue_version_date)
-                self.log.info('Review for ' + str(issue_title) + ' created')
+            self.log.info(review)
+
+            if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
+                self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
 
             else:
-                self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
+                self.create_review(revision_id, issue_id, issue_title, issue_version_date)
+                self.log.info('Review for ' + str(issue_title) + ' created')
 
         self.check_open_reviews()
         self.check_closed_reviews()
