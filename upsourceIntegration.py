@@ -38,23 +38,25 @@ class Integration(object):
 
             review = self.get_reviews(issue_title)
 
-            revisions = self.filtered_revision_list(issue_title)
-            for revision in revisions:
-                if 'revisionCommitMessage' in revision:
-                    revision_title = revision['revisionCommitMessage']
+            if "iOS" not in issue_title and "Android" not in issue_title:
+                revisions = self.filtered_revision_list(issue_title)
 
-                    if 'Merge ' not in revision_title:
-                        revision_id = revision['revisionId']
-                        break
+                for revision in revisions:
+                    if 'revisionCommitMessage' in revision:
+                        revision_title = revision['revisionCommitMessage']
 
-            self.log.info(review)
+                        if 'Merge ' not in revision_title:
+                            revision_id = revision['revisionId']
+                            break
 
-            if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
-                self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
+                self.log.info(review)
 
-            else:
-                self.create_review(revision_id, issue_id, issue_title, issue_version_date)
-                self.log.info('Review for ' + str(issue_title) + ' created')
+                if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
+                    self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
+
+                else:
+                    self.create_review(revision_id, issue_id, issue_title, issue_version_date)
+                    self.log.info('Review for ' + str(issue_title) + ' created')
 
         self.check_open_reviews()
         self.check_closed_reviews()
@@ -166,15 +168,16 @@ class Integration(object):
 
     #Attaches a revision to a review
     def add_revision_to_review(self, review_id, issue_title):
-        revision_list = self.filtered_revision_list(issue_title)
-        for revision in revision_list:
-            revision_id = revision['revisionId']
-            revision_title = revision['revisionCommitMessage']
+        if "iOS" not in issue_title and "Android" not in issue_title:
+            revision_list = self.filtered_revision_list(issue_title)
+            for revision in revision_list:
+                revision_id = revision['revisionId']
+                revision_title = revision['revisionCommitMessage']
 
-            if 'Merge ' not in revision_title:
-                url = self.url_upsource + '~rpc/addRevisionToReview'
-                data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "revisionId":revision_id}
-                requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+                if 'Merge ' not in revision_title:
+                    url = self.url_upsource + '~rpc/addRevisionToReview'
+                    data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "revisionId":revision_id}
+                    requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Added participants in review
     def setting_participants(self, review_participants, review_id, revision_id):
