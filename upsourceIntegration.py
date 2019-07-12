@@ -333,29 +333,30 @@ class Integration(object):
 
             issue_title = self.get_issue_title(review_title)
             issue = self.check_issue('', issue_title)
-            issue_status = issue[0]['VQS_IT_STATUS']
+            if len(issue) > 0:
+                issue_status = issue[0]['VQS_IT_STATUS']
 
-            if issue_status in ['Ready for Test', 'Ready for Merge']:
-                self.close_or_reopen_review(review_id, True)
+                if issue_status in ['Ready for Test', 'Ready for Merge']:
+                    self.close_or_reopen_review(review_id, True)
 
-                if 'labels' in review_data:
-                    review_labels = review_data[0]['labels']
-                    for label in review_labels:
-                        self.delete_review_label(review_id, label['id'], label['name'])
+                    if 'labels' in review_data:
+                        review_labels = review_data[0]['labels']
+                        for label in review_labels:
+                            self.delete_review_label(review_id, label['id'], label['name'])
 
-                if 'branch' in review_data:
-                    branch_in_review = review_data[0]['branch']
-                    self.stop_branch_tracking(branch_in_review, review_id)
+                    if 'branch' in review_data:
+                        branch_in_review = review_data[0]['branch']
+                        self.stop_branch_tracking(branch_in_review, review_id)
 
-                self.log.info('Review ' + str(review_id) + ' closed')
+                    self.log.info('Review ' + str(review_id) + ' closed')
 
-            elif issue_status == 'In Progress':
-                self.add_review_label(review_id, 'WIP', 'work in progress')
-                self.delete_review_label(review_id, 'ready', 'ready for review')
+                elif issue_status == 'In Progress':
+                    self.add_review_label(review_id, 'WIP', 'work in progress')
+                    self.delete_review_label(review_id, 'ready', 'ready for review')
 
-            elif issue_status == 'Ready for Review':
-                self.add_review_label(review_id, 'ready', 'ready for review')
-                self.delete_review_label(review_id, 'WIP', 'work in progress')
+                elif issue_status == 'Ready for Review':
+                    self.add_review_label(review_id, 'ready', 'ready for review')
+                    self.delete_review_label(review_id, 'WIP', 'work in progress')
 
     #Returns issue title
     def get_issue_title(self, title):
