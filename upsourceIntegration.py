@@ -29,14 +29,12 @@ class Integration(object):
     def start_integration(self):
         self.log.info('Started upsource integration')
 
-        issue_list = self.check_issue('Ready for Review', '')
+        issue_list = self.check_issue(self.project_onevizion, 'Ready for Review', '')
 
         for issue in issue_list:
             issue_id = issue['TRACKOR_ID']
             issue_title = issue['TRACKOR_KEY']
             issue_version_date = issue['Version.VER_REL_DATE']
-
-            review = self.get_reviews(issue_title)
 
             if "iOS" not in issue_title and "Android" not in issue_title:
                 try:
@@ -47,6 +45,7 @@ class Integration(object):
                     revisions = None
                 except Exception as e:
                     self.log.warning('Revisions are not found for Issue ID: [%s]' % issue_title)
+
                     if hasattr(e, 'message'):
                         self.log.warning(e.message)
                     else:
@@ -54,22 +53,13 @@ class Integration(object):
                     revisions = None
 
                 if revisions is not None:
-                    for revision in revisions:
-                        if 'revisionCommitMessage' in revision:
-                            revision_title = revision['revisionCommitMessage']
-
-                            if 'Merge ' not in revision_title:
-                                revision_id = revision['revisionId']
-                                break
-
-                    self.log.info(review)
+                    review = self.get_reviews(issue_title)
 
                     if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
-                        self.setting_review(issue_id, issue_title, issue_version_date, revision_id, review)
+                        break
 
                     else:
-                        self.create_review(revision_id, issue_id, issue_title, issue_version_date)
-                        self.log.info('Review for ' + str(issue_title) + ' created')
+                        self.create_review(revisions, issue_id, issue_title, issue_version_date)
 
         self.check_open_reviews()
         self.check_closed_reviews()
@@ -77,9 +67,9 @@ class Integration(object):
         self.log.info('Finished upsource integration')
 
     #Checks issue status
-    def check_issue(self, status, issue):
+    def check_issue(self, project_onevizion, status, issue):
         url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-        data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_REL_DATE", "Product.TRACKOR_KEY":self.project_onevizion, "VQS_IT_STATUS":status, "TRACKOR_KEY":issue}
+        data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_REL_DATE", "Product.TRACKOR_KEY":project_onevizion, "VQS_IT_STATUS":status, "TRACKOR_KEY":issue}
         answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
         response = answer.json()
         return response
@@ -94,7 +84,15 @@ class Integration(object):
         return readble_json
 
     #Create review
-    def create_review(self, revision_id, issue_id, issue_title, issue_version_date):
+    def create_review(self, revisions, issue_id, issue_title, issue_version_date):
+        for revision in revisions:
+            if 'revisionCommitMessage' in revision:
+                revision_title = revision['revisionCommitMessage']
+
+                if 'Merge ' not in revision_title:
+                    revision_id = revision['revisionId']
+                    break
+
         url = self.url_upsource + '~rpc/createReview'
         data = {"projectId":self.project_name, "revisions":revision_id}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
@@ -106,7 +104,7 @@ class Integration(object):
         self.delete_default_reviewer(review_id)
         self.add_url_to_issue(issue_id, review_id)
 
-        self.setting_review(issue_id, issue_title, issue_version_date, revision_id, created_review)
+        self.log.info('Review for ' + str(issue_title) + ' created')
 
     #Removes a default reviewer from a review
     def delete_default_reviewer(self, review_id):
@@ -121,7 +119,7 @@ class Integration(object):
         requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
 
     #Setting review
-    def setting_review(self, issue_id, issue_title, issue_version_date, revision_id, review):
+    def setting_review(self, issue_id, issue_title, issue_version_date, review):
         review_status = review[0]['state']
         review_id = review[0]['reviewId']['reviewId']
 
@@ -129,7 +127,7 @@ class Integration(object):
             review_participants = review[0]['participants']
 
             self.add_revision_to_review(review_id, issue_title)
-            self.setting_participants(review_participants, review_id, revision_id)
+            self.setting_participants(review_participants, review_id)
             self.setting_branch_tracking(review, review_id)
 
             if issue_version_date != None:
@@ -207,7 +205,7 @@ class Integration(object):
                         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Added participants in review
-    def setting_participants(self, review_participants, review_id, revision_id):
+    def setting_participants(self, review_participants, review_id):
         reviewer_id = ''
         for participant in review_participants:
             if participant['role'] == 1:
@@ -332,7 +330,8 @@ class Integration(object):
             review_id = review_data['reviewId']['reviewId']
 
             issue_title = self.get_issue_title(review_title)
-            issue = self.check_issue('', issue_title)
+            issue = self.check_issue('', '', issue_title)
+
             if len(issue) > 0:
                 issue_status = issue[0]['VQS_IT_STATUS']
 
@@ -350,13 +349,21 @@ class Integration(object):
 
                     self.log.info('Review ' + str(review_id) + ' closed')
 
-                elif issue_status == 'In Progress':
-                    self.add_review_label(review_id, 'WIP', 'work in progress')
-                    self.delete_review_label(review_id, 'ready', 'ready for review')
+                else:
+                    issue_id = issue['TRACKOR_ID']
+                    issue_title = issue['TRACKOR_KEY']
+                    issue_version_date = issue['Version.VER_REL_DATE']
+                    review = self.get_reviews(issue_title)
 
-                elif issue_status == 'Ready for Review':
-                    self.add_review_label(review_id, 'ready', 'ready for review')
-                    self.delete_review_label(review_id, 'WIP', 'work in progress')
+                    self.setting_review(issue_id, issue_title, issue_version_date, review)
+
+                    if issue_status == 'In Progress':
+                        self.add_review_label(review_id, 'WIP', 'work in progress')
+                        self.delete_review_label(review_id, 'ready', 'ready for review')
+
+                    elif issue_status == 'Ready for Review':
+                        self.add_review_label(review_id, 'ready', 'ready for review')
+                        self.delete_review_label(review_id, 'WIP', 'work in progress')
 
     #Returns issue title
     def get_issue_title(self, title):
