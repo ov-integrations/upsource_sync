@@ -21,7 +21,7 @@ class Integration(object):
         current_day_datetime = datetime.strptime(current_day, '%m/%d/%Y %H:%M')
         self.previous_time = str((current_day_datetime - timedelta(minutes=15)).strftime('%m/%d/%Y %H:%M'))
         self.sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
-
+        self.next_two_week = str((datetime.now() + timedelta(days=14)).strftime('%m/%d/%Y'))
         self.log = self.get_logger()
 
         self.start_integration()
@@ -286,10 +286,10 @@ class Integration(object):
 
         current_release = str((datetime_object - timedelta(days=4)).strftime('%m/%d/%Y'))
 
-        if current_release > self.sysdate:
+        if current_release > self.sysdate and current_release < self.next_two_week:
             self.add_review_label(review_id, '1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
-        elif current_release <= self.sysdate:
+        elif current_release <= self.sysdate or current_release >= self.next_two_week:
             self.delete_review_label(review_id, '1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
     #Adds a label to a review
