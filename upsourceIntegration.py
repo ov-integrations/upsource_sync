@@ -350,9 +350,9 @@ class Integration(object):
                     self.log.info('Review ' + str(review_id) + ' closed')
 
                 else:
-                    issue_id = issue['TRACKOR_ID']
-                    issue_title = issue['TRACKOR_KEY']
-                    issue_version_date = issue['Version.VER_REL_DATE']
+                    issue_id = issue[0]['TRACKOR_ID']
+                    issue_title = issue[0]['TRACKOR_KEY']
+                    issue_version_date = issue[0]['Version.VER_REL_DATE']
                     review = self.get_reviews(issue_title)
 
                     self.setting_review(issue_id, issue_title, issue_version_date, review)
