@@ -336,7 +336,7 @@ class Integration(object):
             if len(issue) > 0:
                 issue_status = issue[0]['VQS_IT_STATUS']
 
-                if issue_status in ['Ready for Test', 'Ready for Merge']:
+                if issue_status in ['Ready for Test', 'Ready for Merge', 'Closed']:
                     self.close_or_reopen_review(review_id, True)
 
                     if 'labels' in review_data:
