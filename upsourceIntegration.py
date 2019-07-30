@@ -56,8 +56,9 @@ class Integration(object):
                     review = self.get_reviews(issue_title)
                     review_status = review[0]['state']
 
-                    if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0] and review_status == 2:
-                        self.change_issue_status(revisions, review, issue_id, issue_title)
+                    if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
+                        if review_status == 2:
+                            self.change_issue_status(revisions, review, issue_id, issue_title)
                     else:
                         self.create_review(revisions, issue_id, issue_title, issue_version_date)
 
