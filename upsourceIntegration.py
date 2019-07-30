@@ -56,7 +56,7 @@ class Integration(object):
                     review = self.get_reviews(issue_title)
 
                     if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
-                        break
+                        None
 
                     else:
                         self.create_review(revisions, issue_id, issue_title, issue_version_date)
