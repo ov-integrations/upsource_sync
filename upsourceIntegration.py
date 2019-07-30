@@ -54,10 +54,10 @@ class Integration(object):
 
                 if revisions is not None:
                     review = self.get_reviews(issue_title)
+                    review_status = review[0]['state']
 
-                    if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
-                        None
-
+                    if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0] and review_status == 2:
+                        self.change_issue_status(revisions, review, issue_id, issue_title)
                     else:
                         self.create_review(revisions, issue_id, issue_title, issue_version_date)
 
@@ -82,6 +82,38 @@ class Integration(object):
         response = answer.json()
         readble_json = response['result']['revision']
         return readble_json
+
+    def change_issue_status(self, revisions, review, issue_id, issue_title):
+        review_updated_at = str(review[0]['updatedAt'])[:-3]
+        update_date = str(datetime.fromtimestamp(int(review_updated_at)).strftime('%m/%d/%Y %H:%M'))
+        review_id = review[0]['reviewId']['reviewId']
+
+        branch_in_review = 'master'
+        if 'branchHeadLabel' in revisions:
+            branch_in_review = revisions[0]['branchHeadLabel']
+
+        if self.previous_time >= update_date:
+            self.close_or_reopen_review(review_id, False)
+            self.add_review_label(review_id, 'ready', 'ready for review')
+
+            if branch_in_review != 'master':
+                self.start_branch_tracking(review_id, branch_in_review)
+
+            self.log.info('Review' + str(review_id) + ' reopened')
+
+        else:
+            if 'labels' in review:
+                review_labels = review[0]['labels']
+
+                for label in review_labels:
+                    self.delete_review_label(review_id, label['id'], label['name'])
+
+            if branch_in_review != 'master':
+                self.stop_branch_tracking(branch_in_review, review_id)
+                self.update_status(issue_id, issue_title, 'Ready for Merge')
+
+            else:
+                self.update_status(issue_id, issue_title, 'Ready for Test')
 
     #Create review
     def create_review(self, revisions, issue_id, issue_title, issue_version_date):
@@ -118,52 +150,6 @@ class Integration(object):
         data = {"I_CODE_REVIEW":self.url_upsource + self.project_name + "/review/" + review_id}
         requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
 
-    #Setting review
-    def setting_review(self, issue_id, issue_title, issue_version_date, review):
-        review_status = review[0]['state']
-        review_id = review[0]['reviewId']['reviewId']
-
-        if review_status == 1:
-            review_participants = review[0]['participants']
-
-            self.add_revision_to_review(review_id, issue_title)
-            self.setting_participants(review_participants, review_id)
-            self.setting_branch_tracking(review, review_id)
-
-            if issue_version_date != None:
-                self.setting_current_release_label(issue_version_date, review_id)
-
-        elif review_status == 2:
-            review_updated_at = str(review[0]['updatedAt'])[:-3]
-            update_date = str(datetime.fromtimestamp(int(review_updated_at)).strftime('%m/%d/%Y %H:%M'))
-
-            branch_in_review = 'master'
-            if 'branch' in review:
-                branch_in_review = review[0]['branch']
-
-            if self.previous_time >= update_date:
-                self.close_or_reopen_review(review_id, False)
-                self.add_review_label(review_id, 'ready', 'ready for review')
-
-                if branch_in_review != 'master':
-                    self.start_branch_tracking(review_id, branch_in_review)
-
-                self.log.info('Review' + str(review_id) + ' reopened')
-
-            else:
-                if 'labels' in review:
-                    review_labels = review[0]['labels']
-
-                    for label in review_labels:
-                        self.delete_review_label(review_id, label['id'], label['name'])
-
-                if branch_in_review != 'master':
-                    self.stop_branch_tracking(branch_in_review, review_id)
-                    self.update_status(issue_id, issue_title, 'Ready for Merge')
-
-                else:
-                    self.update_status(issue_id, issue_title, 'Ready for Test')
-
     #Returns review data
     def get_reviews(self, query):
         url = self.url_upsource + '~rpc/getReviews'
@@ -176,6 +162,115 @@ class Integration(object):
             return review
         else:
             return review
+
+    #Change a review to a review for a branch
+    def start_branch_tracking(self, review_id, branch):
+        url = self.url_upsource + '~rpc/startBranchTracking'
+        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+
+    #Adds a label to a review
+    def add_review_label(self, review_id, label_id, label_name):
+        url = self.url_upsource + '~rpc/addReviewLabel'
+        data = {"projectId":self.project_name, "reviewId":{"projectId":self.project_name, "reviewId":review_id}, "label":{"id":label_id, "name":label_name}}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+
+    #Delete a label to a review
+    def delete_review_label(self, review_id, label_id, label_name):
+        url = self.url_upsource + '~rpc/removeReviewLabel'
+        data = {"projectId":self.project_name, "reviewId":{"projectId":self.project_name, "reviewId":review_id}, "label":{"id":label_id, "name":label_name}}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+
+    #Close or reopen review
+    def close_or_reopen_review(self, review_id, status):
+        url = self.url_upsource + '~rpc/closeReview'
+        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "isFlagged":status}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+
+    #Updates issue status
+    def update_status(self, issue_id, issue_title, status):
+        url = self.url_onevizion + 'api/v3/trackors/' + str(issue_id)
+        data = {"VQS_IT_STATUS":status}
+        requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
+
+        self.log.info('Issue ' + str(issue_title) + ' updated status to ' + str(status))
+
+    #Stops branch tracking for a given review
+    def stop_branch_tracking(self, branch, review_id):
+        url = self.url_upsource + '~rpc/stopBranchTracking'
+        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+
+    #Close review if issue status = Ready for Test/Merge
+    def check_open_reviews(self):
+        review_list = self.get_reviews('state: open')
+        for review_data in review_list:
+            review_title = review_data['title']
+            review_id = review_data['reviewId']['reviewId']
+
+            issue_title = self.get_issue_title(review_title)
+            issue = self.check_issue('', '', issue_title)
+
+            if len(issue) > 0:
+                issue_status = issue[0]['VQS_IT_STATUS']
+
+                if issue_status in ['Ready for Test', 'Ready for Merge', 'Closed']:
+                    self.close_or_reopen_review(review_id, True)
+
+                    if 'labels' in review_data:
+                        review_labels = review_data[0]['labels']
+                        for label in review_labels:
+                            self.delete_review_label(review_id, label['id'], label['name'])
+
+                    if 'branch' in review_data:
+                        branch_in_review = review_data[0]['branch']
+                        self.stop_branch_tracking(branch_in_review, review_id)
+
+                    self.log.info('Review ' + str(review_id) + ' closed')
+
+                else:
+                    issue_id = issue[0]['TRACKOR_ID']
+                    issue_title = issue[0]['TRACKOR_KEY']
+                    issue_version_date = issue[0]['Version.VER_REL_DATE']
+                    review = self.get_reviews(issue_title)
+
+                    self.setting_review(issue_id, issue_title, issue_version_date, review)
+
+                    if issue_status == 'In Progress':
+                        self.add_review_label(review_id, 'WIP', 'work in progress')
+                        self.delete_review_label(review_id, 'ready', 'ready for review')
+
+                    elif issue_status == 'Ready for Review':
+                        self.delete_review_label(review_id, 'WIP', 'work in progress')
+
+    #Returns issue title
+    def get_issue_title(self, title):
+        if 'Review of ' in title:
+            start = title.find('Review of ')
+            finish = title.find('-')
+            issue_title = title[start+10:finish+7]
+
+        else:
+            issue_title = title[title.find('') : title.find(' ')]
+
+        return issue_title
+
+    #Setting review
+    def setting_review(self, issue_id, issue_title, issue_version_date, review):
+        review_status = review[0]['state']
+        review_id = review[0]['reviewId']['reviewId']
+
+        revision_list = self.filtered_revision_list(issue_title)
+
+        if review_status == 1:
+            review_participants = review[0]['participants']
+
+            self.add_revision_to_review(review_id, issue_title)
+            self.setting_participants(review_participants, review_id)
+            self.setting_branch_tracking(review, review_id)
+
+            if issue_version_date != None:
+                self.setting_current_release_label(issue_version_date, review_id)
 
     #Attaches a revision to a review
     def add_revision_to_review(self, review_id, issue_title):
@@ -272,12 +367,6 @@ class Integration(object):
             review_branch = review_data[0]['branch']
             self.start_branch_tracking(review_id, review_branch)
 
-    #Change a review to a review for a branch
-    def start_branch_tracking(self, review_id, branch):
-        url = self.url_upsource + '~rpc/startBranchTracking'
-        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
-        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-
     #Checks release date and adds or removes label
     def setting_current_release_label(self, issue_version_date, review_id):
         datetime_object = datetime.strptime(issue_version_date, '%Y-%m-%d')
@@ -289,92 +378,6 @@ class Integration(object):
 
         elif current_release <= self.sysdate or current_release >= self.next_two_week:
             self.delete_review_label(review_id, '1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
-
-    #Adds a label to a review
-    def add_review_label(self, review_id, label_id, label_name):
-        url = self.url_upsource + '~rpc/addReviewLabel'
-        data = {"projectId":self.project_name, "reviewId":{"projectId":self.project_name, "reviewId":review_id}, "label":{"id":label_id, "name":label_name}}
-        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-
-    #Delete a label to a review
-    def delete_review_label(self, review_id, label_id, label_name):
-        url = self.url_upsource + '~rpc/removeReviewLabel'
-        data = {"projectId":self.project_name, "reviewId":{"projectId":self.project_name, "reviewId":review_id}, "label":{"id":label_id, "name":label_name}}
-        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-
-    #Close or reopen review
-    def close_or_reopen_review(self, review_id, status):
-        url = self.url_upsource + '~rpc/closeReview'
-        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "isFlagged":status}
-        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-
-    #Updates issue status
-    def update_status(self, issue_id, issue_title, status):
-        url = self.url_onevizion + 'api/v3/trackors/' + str(issue_id)
-        data = {"VQS_IT_STATUS":status}
-        requests.put(url, headers=self.headers, data=json.dumps(data), auth=self.auth_onevizion)
-
-        self.log.info('Issue ' + str(issue_title) + ' updated status to ' + str(status))
-
-    #Stops branch tracking for a given review
-    def stop_branch_tracking(self, branch, review_id):
-        url = self.url_upsource + '~rpc/stopBranchTracking'
-        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "branch":branch}
-        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-
-    #Close review if issue status = Ready for Test/Merge
-    def check_open_reviews(self):
-        review_list = self.get_reviews('state: open')
-        for review_data in review_list:
-            review_title = review_data['title']
-            review_id = review_data['reviewId']['reviewId']
-
-            issue_title = self.get_issue_title(review_title)
-            issue = self.check_issue('', '', issue_title)
-
-            if len(issue) > 0:
-                issue_status = issue[0]['VQS_IT_STATUS']
-
-                if issue_status in ['Ready for Test', 'Ready for Merge', 'Closed']:
-                    self.close_or_reopen_review(review_id, True)
-
-                    if 'labels' in review_data:
-                        review_labels = review_data[0]['labels']
-                        for label in review_labels:
-                            self.delete_review_label(review_id, label['id'], label['name'])
-
-                    if 'branch' in review_data:
-                        branch_in_review = review_data[0]['branch']
-                        self.stop_branch_tracking(branch_in_review, review_id)
-
-                    self.log.info('Review ' + str(review_id) + ' closed')
-
-                else:
-                    issue_id = issue[0]['TRACKOR_ID']
-                    issue_title = issue[0]['TRACKOR_KEY']
-                    issue_version_date = issue[0]['Version.VER_REL_DATE']
-                    review = self.get_reviews(issue_title)
-
-                    self.setting_review(issue_id, issue_title, issue_version_date, review)
-
-                    if issue_status == 'In Progress':
-                        self.add_review_label(review_id, 'WIP', 'work in progress')
-                        self.delete_review_label(review_id, 'ready', 'ready for review')
-
-                    elif issue_status == 'Ready for Review':
-                        self.delete_review_label(review_id, 'WIP', 'work in progress')
-
-    #Returns issue title
-    def get_issue_title(self, title):
-        if 'Review of ' in title:
-            start = title.find('Review of ')
-            finish = title.find('-')
-            issue_title = title[start+10:finish+7]
-
-        else:
-            issue_title = title[title.find('') : title.find(' ')]
-
-        return issue_title
 
     #Removes labels from closed reviews and stop branch tracking
     def check_closed_reviews(self):
