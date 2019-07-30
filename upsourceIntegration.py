@@ -90,8 +90,9 @@ class Integration(object):
         review_id = review[0]['reviewId']['reviewId']
 
         branch_in_review = 'master'
-        if 'branchHeadLabel' in revisions:
-            branch_in_review = revisions[0]['branchHeadLabel']
+        for revision in revisions:
+            if 'branchHeadLabel' in revision:
+                branch_in_review = revision['branchHeadLabel']
 
         if self.previous_time >= update_date:
             self.close_or_reopen_review(review_id, False)
