@@ -362,7 +362,6 @@ class Integration(object):
                         self.delete_review_label(review_id, 'ready', 'ready for review')
 
                     elif issue_status == 'Ready for Review':
-                        self.add_review_label(review_id, 'ready', 'ready for review')
                         self.delete_review_label(review_id, 'WIP', 'work in progress')
 
     #Returns issue title
