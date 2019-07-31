@@ -54,9 +54,10 @@ class Integration(object):
 
                 if revisions is not None:
                     review = self.get_reviews(issue_title)
-                    review_status = review[0]['state']
 
                     if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
+                        review_status = review[0]['state']
+
                         if review_status == 2:
                             self.change_issue_status(revisions, review, issue_id, issue_title)
                     else:
