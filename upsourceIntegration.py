@@ -270,7 +270,7 @@ class Integration(object):
 
             self.add_revision_to_review(review_id, issue_title)
             self.setting_participants(review_participants, review_id)
-            self.setting_branch_tracking(review, review_id)
+            self.setting_branch_tracking(revision_list, review_id)
 
             if issue_version_date != None:
                 self.setting_current_release_label(issue_version_date, review_id)
@@ -365,10 +365,11 @@ class Integration(object):
                 requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Start branch tracking if review in a branch
-    def setting_branch_tracking(self, review_data, review_id):
-        if 'branch' in review_data:
-            review_branch = review_data[0]['branch']
-            self.start_branch_tracking(review_id, review_branch)
+    def setting_branch_tracking(self, revision_list, review_id):
+        for revision in revision_list:
+            if 'branchHeadLabel' in revision:
+                review_branch = revision['branchHeadLabel']
+                self.start_branch_tracking(review_id, review_branch)
 
     #Checks release date and adds or removes label
     def setting_current_release_label(self, issue_version_date, review_id):
