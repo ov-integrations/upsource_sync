@@ -5,7 +5,7 @@ Integrates [JetBrains Upsource](https://www.jetbrains.com/upsource/) code review
 
 Requirements
 - python version 3.7.2.
-- python request library
+- python requests library (pip install requests)
 
 Features
 - creates new code reviews based for "Ready for Review" issues
