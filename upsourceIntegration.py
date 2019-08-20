@@ -3,6 +3,7 @@ from requests.auth import HTTPBasicAuth
 import json
 import logging
 import sys
+import re
 from datetime import datetime, timedelta
 
 class Integration(object):
@@ -94,6 +95,10 @@ class Integration(object):
         for revision in revisions:
             if 'branchHeadLabel' in revision:
                 branch_in_review = revision['branchHeadLabel']
+                branch_in_review_re = ''.join(branch_in_review)
+                exclude_versions = re.search('^\d\d\.(\d\d$|\d$)', branch_in_review_re)
+                if exclude_versions is None:
+                    break
 
         if self.previous_time >= update_date:
             self.close_or_reopen_review(review_id, False)
@@ -369,7 +374,11 @@ class Integration(object):
         for revision in revision_list:
             if 'branchHeadLabel' in revision:
                 review_branch = revision['branchHeadLabel']
-                self.start_branch_tracking(review_id, review_branch)
+                review_branch_re = ''.join(review_branch)
+                exclude_versions = re.search('^\d\d\.(\d\d$|\d$)', review_branch_re)
+                if exclude_versions is None:
+                    self.start_branch_tracking(review_id, review_branch)
+                    break
 
     #Checks release date and adds or removes label
     def setting_current_release_label(self, issue_version_date, review_id):
