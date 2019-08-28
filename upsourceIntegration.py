@@ -96,7 +96,7 @@ class Integration(object):
             if 'branchHeadLabel' in revision:
                 branch_in_review = revision['branchHeadLabel']
                 branch_in_review_re = ''.join(branch_in_review)
-                exclude_versions = re.search('^\d\d\.(\d\d$|\d$)', branch_in_review_re)
+                exclude_versions = re.search(r'^\d\d\.(\d\d$|\d$)', branch_in_review_re)
                 if exclude_versions is None:
                     break
 
@@ -375,7 +375,7 @@ class Integration(object):
             if 'branchHeadLabel' in revision:
                 review_branch = revision['branchHeadLabel']
                 review_branch_re = ''.join(review_branch)
-                exclude_versions = re.search('^\d\d\.(\d\d$|\d$)', review_branch_re)
+                exclude_versions = re.search(r'^\d\d\.(\d\d$|\d$)', review_branch_re)
                 if exclude_versions is None:
                     self.start_branch_tracking(review_id, review_branch)
                     break
