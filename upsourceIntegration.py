@@ -272,15 +272,28 @@ class Integration(object):
 
         if review_status == 1:
             review_participants = review[0]['participants']
-
-            self.add_revision_to_review(review_id, issue_title)
+            
+            self.setting_branch_tracking(revision_list, review_id, issue_title)
             self.setting_participants(review_participants, review_id)
-            self.setting_branch_tracking(revision_list, review_id)
 
             if issue_version_date != None:
                 self.setting_current_release_label(issue_version_date, review_id)
 
-    #Attaches a revision to a review
+    #Start branch tracking if review in a branch otherwise attaches revision to review
+    def setting_branch_tracking(self, revision_list, review_id, issue_title):
+        for revision in revision_list:
+            if 'branchHeadLabel' in revision:
+                review_branch = revision['branchHeadLabel']
+                review_branch_re = ''.join(review_branch)
+                exclude_versions = re.search(r'^\d\d\.(\d\d$|\d$)', review_branch_re)
+                if exclude_versions is None:
+                    self.start_branch_tracking(review_id, review_branch)
+                    break
+
+            else:
+                self.add_revision_to_review(review_id, issue_title)
+
+    #Attaches revision to review
     def add_revision_to_review(self, review_id, issue_title):
         if "iOS" not in issue_title and "Android" not in issue_title:
             try:
@@ -368,17 +381,6 @@ class Integration(object):
                 url = self.url_upsource + '~rpc/addParticipantToReview'
                 data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "participant":{"userId":user_id, "role":2}}
                 requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-
-    #Start branch tracking if review in a branch
-    def setting_branch_tracking(self, revision_list, review_id):
-        for revision in revision_list:
-            if 'branchHeadLabel' in revision:
-                review_branch = revision['branchHeadLabel']
-                review_branch_re = ''.join(review_branch)
-                exclude_versions = re.search(r'^\d\d\.(\d\d$|\d$)', review_branch_re)
-                if exclude_versions is None:
-                    self.start_branch_tracking(review_id, review_branch)
-                    break
 
     #Checks release date and adds or removes label
     def setting_current_release_label(self, issue_version_date, review_id):
