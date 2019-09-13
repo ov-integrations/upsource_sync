@@ -284,11 +284,14 @@ class Integration(object):
         for revision in revision_list:
             if 'branchHeadLabel' in revision:
                 review_branch = revision['branchHeadLabel']
-                review_branch_re = ''.join(review_branch)
-                exclude_versions = re.search(r'^\d\d\.(\d\d$|\d$)', review_branch_re)
-                if exclude_versions is None:
-                    self.start_branch_tracking(review_id, review_branch)
-                    break
+                if review_branch == 'master':
+                    self.add_revision_to_review(review_id, issue_title)
+                else:    
+                    review_branch_re = ''.join(review_branch)
+                    exclude_versions = re.search(r'^\d\d\.(\d\d$|\d$)', review_branch_re)
+                    if exclude_versions is None:
+                        self.start_branch_tracking(review_id, review_branch)
+                        break
 
             else:
                 self.add_revision_to_review(review_id, issue_title)
