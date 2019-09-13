@@ -335,28 +335,25 @@ class Integration(object):
 
     #Returns the code ownership summary for a given review
     def get_review_file_extension(self, review_id, author_id):
-        url = self.url_upsource + '~rpc/getReviewOwnershipSummary'
-        data = {"projectId":self.project_name, "reviewId":review_id}
+        url = self.url_upsource + '~rpc/getReviewSummaryChanges'
+        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "revisions":{"selectAll":True}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         response = answer.json()
-        changed_file  = response['result']
+        changed_file = response['result']['diff']['diff']
 
         file_list = []
-        if 'files' in changed_file:
-            change_list = changed_file['files']
+        for diff_file in changed_file:
+            file_path = diff_file['fileIcon']
+            file_extension = file_path[file_path.rfind(':')+1:]
 
-            for diff_file in change_list:
-                file_path = diff_file['filePath']
-                file_extension = file_path[file_path.rfind('.')+1:]
+            if file_extension in ['js', 'css', 'html', 'jsp', 'tag']:
+                file_extension = 'js'
 
-                if file_extension in ['js', 'css', 'html', 'jsp', 'tag']:
-                    file_extension = 'js'
+            if file_extension not in file_list:
+                file_list.insert(0, file_extension)
 
-                if file_extension not in file_list:
-                    file_list.insert(0, file_extension)
-
-                if 'sql' in file_list and 'java' in file_list and 'js' in file_list:
-                    break
+            if 'sql' in file_list and 'java' in file_list and 'js' in file_list:
+                break
 
         self.add_reviewer(review_id, file_list, author_id)
 
