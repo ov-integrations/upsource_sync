@@ -374,17 +374,17 @@ class Integration(object):
                 requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Checks release date and adds or removes label
-    def setting_current_release_label(self):                
-        sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
-        next_two_week = str((datetime.now() + timedelta(days=13)).strftime('%m/%d/%Y'))
-        
+    def setting_current_release_label(self):                        
         datetime_object = datetime.strptime(self.issue_uat_date, '%Y-%m-%d')
         current_release = str(datetime_object.strftime('%m/%d/%Y'))
+        
+        sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
+        next_two_week = str((datetime_object + timedelta(days=13)).strftime('%m/%d/%Y'))
 
-        if current_release > sysdate and current_release < next_two_week:
+        if current_release >= sysdate and current_release <= next_two_week:
             self.add_review_label('1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
-        elif current_release <= sysdate or current_release >= next_two_week:
+        elif current_release < sysdate:
             self.delete_review_label('1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
     #Removes labels from closed reviews and stop branch tracking
