@@ -21,12 +21,6 @@ class Integration(object):
 
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
         self.log = self.get_logger()
-        
-        current_day = str((datetime.now()).strftime('%m/%d/%Y %H:%M'))
-        current_day_datetime = datetime.strptime(current_day, '%m/%d/%Y %H:%M')
-        self.previous_time = str((current_day_datetime - timedelta(minutes=15)).strftime('%m/%d/%Y %H:%M'))
-        self.sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
-        self.next_two_week = str((datetime.now() + timedelta(days=14)).strftime('%m/%d/%Y'))
 
         self.start_integration()
 
@@ -76,7 +70,7 @@ class Integration(object):
         if status == '':
             self.issue_list_request.read(
                 filters={'Product.TRACKOR_KEY':self.project_onevizion,'TRACKOR_KEY':self.issue_title},
-                fields=['TRACKOR_KEY', 'VQS_IT_STATUS', 'Version.VER_REL_DATE']
+                fields=['TRACKOR_KEY', 'VQS_IT_STATUS', 'Version.VER_UAT_DATE']
                 )
         else:
             self.issue_list_request.read(
@@ -109,7 +103,10 @@ class Integration(object):
                 if exclude_versions is None:
                     break
 
-        if self.previous_time >= update_date:
+        current_day = str((datetime.now()).strftime('%m/%d/%Y %H:%M'))
+        current_day_datetime = datetime.strptime(current_day, '%m/%d/%Y %H:%M')
+        previous_time = str((current_day_datetime - timedelta(minutes=15)).strftime('%m/%d/%Y %H:%M'))
+        if previous_time >= update_date:
             self.close_or_reopen_review(False)
             self.add_review_label('ready', 'ready for review')
 
@@ -254,7 +251,7 @@ class Integration(object):
                     self.log.info('Review ' + str(self.review_id) + ' closed')
 
                 else:
-                    self.issue_version_date = issue[0]['Version.VER_REL_DATE']
+                    self.issue_uat_date = issue[0]['Version.VER_UAT_DATE']
                     self.review_participants = review_data['participants']
                     review_status = review_data['state']
 
@@ -262,7 +259,7 @@ class Integration(object):
                         self.setting_branch_tracking()
                         self.setting_participants()
 
-                        if self.issue_version_date != None:
+                        if self.issue_uat_date != None:
                             self.setting_current_release_label()
 
                     if issue_status == 'In Progress':
@@ -377,15 +374,17 @@ class Integration(object):
                 requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Checks release date and adds or removes label
-    def setting_current_release_label(self):
-        datetime_object = datetime.strptime(self.issue_version_date, '%Y-%m-%d')
+    def setting_current_release_label(self):                
+        sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
+        next_two_week = str((datetime.now() + timedelta(days=13)).strftime('%m/%d/%Y'))
+        
+        datetime_object = datetime.strptime(self.issue_uat_date, '%Y-%m-%d')
+        current_release = str(datetime_object.strftime('%m/%d/%Y'))
 
-        current_release = str((datetime_object - timedelta(days=4)).strftime('%m/%d/%Y'))
-
-        if current_release > self.sysdate and current_release < self.next_two_week:
+        if current_release > sysdate and current_release < next_two_week:
             self.add_review_label('1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
-        elif current_release <= self.sysdate or current_release >= self.next_two_week:
+        elif current_release <= sysdate or current_release >= next_two_week:
             self.delete_review_label('1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
     #Removes labels from closed reviews and stop branch tracking
