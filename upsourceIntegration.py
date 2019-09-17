@@ -21,8 +21,6 @@ class Integration(object):
         current_day = str((datetime.now()).strftime('%m/%d/%Y %H:%M'))
         current_day_datetime = datetime.strptime(current_day, '%m/%d/%Y %H:%M')
         self.previous_time = str((current_day_datetime - timedelta(minutes=15)).strftime('%m/%d/%Y %H:%M'))
-        self.sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
-        self.next_two_week = str((datetime.now() + timedelta(days=13)).strftime('%m/%d/%Y'))
         self.log = self.get_logger()
 
         self.start_integration()
@@ -385,13 +383,14 @@ class Integration(object):
     #Checks release date and adds or removes label
     def setting_current_release_label(self, issue_version_date, review_id):
         datetime_object = datetime.strptime(issue_version_date, '%Y-%m-%d')
-
         current_release = str(datetime_object.strftime('%m/%d/%Y'))
+        sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
+        next_two_week = str((datetime_object + timedelta(days=13)).strftime('%m/%d/%Y'))
 
-        if current_release > self.sysdate and current_release < self.next_two_week:
+        if current_release >= sysdate and current_release <= next_two_week:
             self.add_review_label(review_id, '1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
-        elif current_release <= self.sysdate or current_release >= self.next_two_week:
+        elif current_release < sysdate:
             self.delete_review_label(review_id, '1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
     #Removes labels from closed reviews and stop branch tracking
