@@ -22,7 +22,7 @@ class Integration(object):
         current_day_datetime = datetime.strptime(current_day, '%m/%d/%Y %H:%M')
         self.previous_time = str((current_day_datetime - timedelta(minutes=15)).strftime('%m/%d/%Y %H:%M'))
         self.sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
-        self.next_two_week = str((datetime.now() + timedelta(days=14)).strftime('%m/%d/%Y'))
+        self.next_two_week = str((datetime.now() + timedelta(days=13)).strftime('%m/%d/%Y'))
         self.log = self.get_logger()
 
         self.start_integration()
@@ -35,7 +35,7 @@ class Integration(object):
         for issue in issue_list:
             issue_id = issue['TRACKOR_ID']
             issue_title = issue['TRACKOR_KEY']
-            issue_version_date = issue['Version.VER_REL_DATE']
+            issue_version_date = issue['Version.VER_UAT_DATE']
 
             if "iOS" not in issue_title and "Android" not in issue_title:
                 try:
@@ -72,7 +72,7 @@ class Integration(object):
     #Checks issue status
     def check_issue(self, project_onevizion, status, issue):
         url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-        data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_REL_DATE", "Product.TRACKOR_KEY":project_onevizion, "VQS_IT_STATUS":status, "TRACKOR_KEY":issue}
+        data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_UAT_DATE", "Product.TRACKOR_KEY":project_onevizion, "VQS_IT_STATUS":status, "TRACKOR_KEY":issue}
         answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
         response = answer.json()
         return response
@@ -239,7 +239,7 @@ class Integration(object):
                 else:
                     issue_id = issue[0]['TRACKOR_ID']
                     issue_title = issue[0]['TRACKOR_KEY']
-                    issue_version_date = issue[0]['Version.VER_REL_DATE']
+                    issue_version_date = issue[0]['Version.VER_UAT_DATE']
                     review = self.get_reviews(issue_title)
 
                     self.setting_review(issue_id, issue_title, issue_version_date, review)
@@ -386,7 +386,7 @@ class Integration(object):
     def setting_current_release_label(self, issue_version_date, review_id):
         datetime_object = datetime.strptime(issue_version_date, '%Y-%m-%d')
 
-        current_release = str((datetime_object - timedelta(days=4)).strftime('%m/%d/%Y'))
+        current_release = str(datetime_object.strftime('%m/%d/%Y'))
 
         if current_release > self.sysdate and current_release < self.next_two_week:
             self.add_review_label(review_id, '1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
