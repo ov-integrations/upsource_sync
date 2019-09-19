@@ -35,20 +35,7 @@ class Integration(object):
             self.issue_summary = issue['VQS_IT_XITOR_NAME']
 
             if "iOS" not in self.issue_title and "Android" not in self.issue_title:
-                try:
-                    revision_list = self.filtered_revision_list()
-                except KeyError as e:
-                    self.log.warning('Revisions are not found for Issue ID: [%s]' % self.issue_title)
-                    self.log.warning('That key does not exist! [%s]' % str(e))
-                    revision_list = None
-                except Exception as e:
-                    self.log.warning('Revisions are not found for Issue ID: [%s]' % self.issue_title)
-
-                    if hasattr(e, 'message'):
-                        self.log.warning(e.message)
-                    else:
-                        self.log.warning(e)
-                    revision_list = None
+                revision_list = self.check_revision()
 
                 if revision_list is not None:
                     review = self.get_reviews(self.issue_title)
@@ -80,6 +67,24 @@ class Integration(object):
                 )
         response = self.issue_list_request.jsonData
         return response
+
+    def check_revision(self):
+        try:
+            revision_list = self.filtered_revision_list()
+        except KeyError as e:
+            self.log.warning('Revisions are not found for Issue ID: [%s]' % self.issue_title)
+            self.log.warning('That key does not exist! [%s]' % str(e))
+            revision_list = None
+        except Exception as e:
+            self.log.warning('Revisions are not found for Issue ID: [%s]' % self.issue_title)
+
+            if hasattr(e, 'message'):
+                self.log.warning(e.message)
+            else:
+                self.log.warning(e)
+            revision_list = None
+
+        return revision_list
 
     #Returns the list of revisions that match the given search query
     def filtered_revision_list(self):
@@ -295,19 +300,7 @@ class Integration(object):
     #Attaches revision to review
     def add_revision_to_review(self):
         if "iOS" not in self.issue_title and "Android" not in self.issue_title:
-            try:
-                revision_list = self.filtered_revision_list()
-            except KeyError as e:
-                self.log.warning('Revisions are not found for Issue ID: [%s]' % self.issue_title)
-                self.log.warning('That key does not exist! [%s]' % str(e))
-                revision_list = None
-            except Exception as e:
-                self.log.warning('Revisions are not found for Issue ID: [%s]' % self.issue_title)
-                if hasattr(e, 'message'):
-                    self.log.warning(e.message)
-                else:
-                    self.log.warning(e)
-                revision_list = None
+            revision_list = self.check_revision()
 
             if revision_list is not None:
                 for revision in revision_list:
