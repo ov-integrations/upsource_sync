@@ -148,7 +148,7 @@ class Integration(object):
         self.review_id = created_review[0]['reviewId']['reviewId']
 
         url = self.url_upsource + '~rpc/renameReview'
-        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "text":self.issue_summary}
+        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "text":str(self.issue_title) + ' ' + str(self.issue_summary)}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
         self.add_review_label('ready', 'ready for review')
