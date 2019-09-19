@@ -32,6 +32,7 @@ class Integration(object):
         for issue in issue_list:
             self.issue_id = issue['TRACKOR_ID']
             self.issue_title = issue['TRACKOR_KEY']
+            self.issue_summary = issue['VQS_IT_XITOR_NAME']
 
             if "iOS" not in self.issue_title and "Android" not in self.issue_title:
                 try:
@@ -75,7 +76,7 @@ class Integration(object):
         else:
             self.issue_list_request.read(
                 filters={'Product.TRACKOR_KEY':self.project_onevizion,'VQS_IT_STATUS':status},
-                fields=['TRACKOR_KEY', 'VQS_IT_STATUS']
+                fields=['TRACKOR_KEY', 'VQS_IT_STATUS', 'VQS_IT_XITOR_NAME']
                 )
         response = self.issue_list_request.jsonData
         return response
@@ -144,25 +145,29 @@ class Integration(object):
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
         created_review = self.get_reviews(self.issue_title)
-        review_id = created_review[0]['reviewId']['reviewId']
+        self.review_id = created_review[0]['reviewId']['reviewId']
+
+        url = self.url_upsource + '~rpc/renameReview'
+        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "text":self.issue_summary}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
         self.add_review_label('ready', 'ready for review')
-        self.delete_default_reviewer(review_id)
-        self.add_url_to_issue(review_id)
+        self.delete_default_reviewer()
+        self.add_url_to_issue()
 
         self.log.info('Review for ' + str(self.issue_title) + ' created')
 
     #Removes a default reviewer from a review
-    def delete_default_reviewer(self, review_id):
+    def delete_default_reviewer(self):
         url = self.url_upsource + '~rpc/removeParticipantFromReview'
-        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, "participant":{"userId":"653c3d2e-394f-4c6b-8757-3e070c78c910", "role":2}}
+        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "participant":{"userId":"653c3d2e-394f-4c6b-8757-3e070c78c910", "role":2}}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Adds a review url to a issue
-    def add_url_to_issue(self, review_id):
+    def add_url_to_issue(self):
         self.issue_list_request.update(
             trackorId=self.issue_id,
-            fields={'I_CODE_REVIEW':self.url_upsource + self.project_upsource + '/review/' + review_id}
+            fields={'I_CODE_REVIEW':self.url_upsource + self.project_upsource + '/review/' + self.review_id}
             )
 
     #Returns review data
