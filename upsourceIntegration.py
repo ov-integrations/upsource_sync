@@ -33,6 +33,7 @@ class Integration(object):
         for issue in issue_list:
             issue_id = issue['TRACKOR_ID']
             issue_title = issue['TRACKOR_KEY']
+            issue_summary = issue['VQS_IT_XITOR_NAME']
             issue_version_date = issue['Version.VER_UAT_DATE']
 
             if "iOS" not in issue_title and "Android" not in issue_title:
@@ -60,7 +61,7 @@ class Integration(object):
                         if review_status == 2:
                             self.change_issue_status(revisions, review, issue_id, issue_title)
                     else:
-                        self.create_review(revisions, issue_id, issue_title, issue_version_date)
+                        self.create_review(revisions, issue_id, issue_title, issue_summary, issue_version_date)
 
         self.check_open_reviews()
         self.check_closed_reviews()
@@ -70,7 +71,7 @@ class Integration(object):
     #Checks issue status
     def check_issue(self, project_onevizion, status, issue):
         url = self.url_onevizion + 'api/v3/trackor_types/Issue/trackors'
-        data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_UAT_DATE", "Product.TRACKOR_KEY":project_onevizion, "VQS_IT_STATUS":status, "TRACKOR_KEY":issue}
+        data = {"fields":"TRACKOR_KEY, VQS_IT_STATUS, Version.VER_UAT_DATE, VQS_IT_XITOR_NAME", "Product.TRACKOR_KEY":project_onevizion, "VQS_IT_STATUS":status, "TRACKOR_KEY":issue}
         answer = requests.get(url, headers=self.headers, params=data, auth=self.auth_onevizion)
         response = answer.json()
         return response
@@ -122,7 +123,7 @@ class Integration(object):
                 self.update_status(issue_id, issue_title, 'Ready for Test')
 
     #Create review
-    def create_review(self, revisions, issue_id, issue_title, issue_version_date):
+    def create_review(self, revisions, issue_id, issue_title, issue_summary, issue_version_date):
         for revision in revisions:
             if 'revisionCommitMessage' in revision:
                 revision_title = revision['revisionCommitMessage']
@@ -137,6 +138,10 @@ class Integration(object):
 
         created_review = self.get_reviews(issue_title)
         review_id = created_review[0]['reviewId']['reviewId']
+
+        url = self.url_upsource + '~rpc/renameReview'
+        data = {"reviewId":{"projectId":self.project_name, "reviewId":review_id}, "text":issue_summary}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
         self.add_review_label(review_id, 'ready', 'ready for review')
         self.delete_default_reviewer(review_id)
