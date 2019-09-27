@@ -4,8 +4,9 @@
 Integrates [JetBrains Upsource](https://www.jetbrains.com/upsource/) code review tool with OneVizion Issue Trackor
 
 Requirements
-- python version 3.7.2.
+- python version 3.7.2
 - python requests library (pip install requests)
+- python onevizion library (pip install onevizion)
 
 Features
 - creates new code reviews based for "Ready for Review" issues
