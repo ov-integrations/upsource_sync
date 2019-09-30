@@ -9,13 +9,13 @@ from datetime import datetime, timedelta
 
 class Integration(object):
 
-    def __init__(self, url_upsource="", login_upsource="", pass_upsource="", project_upsource="", url_onevizion="", login_onevizion="", pass_onevizion="", project_onevizion="", trackor_type=""):
+    def __init__(self, url_upsource="", login_upsource="", pass_upsource="", project_upsource="", url_onevizion="", login_onevizion="", pass_onevizion="", product_onevizion="", trackor_type=""):
         self.url_upsource = self.url_setting(url_upsource)        
         self.project_upsource = project_upsource
         self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
 
         self.url_onevizion = self.url_setting(url_onevizion)
-        self.project_onevizion = project_onevizion
+        self.product_onevizion = product_onevizion
         self.trackor_type = trackor_type
         self.issue_list_request = onevizion.Trackor(trackorType=self.trackor_type, URL=self.url_onevizion, userName=login_onevizion, password=pass_onevizion)
 
@@ -57,12 +57,12 @@ class Integration(object):
     def check_issue(self, status):
         if status == '':
             self.issue_list_request.read(
-                filters={'Product.TRACKOR_KEY':self.project_onevizion,'TRACKOR_KEY':self.issue_title},
+                filters={'Product.TRACKOR_KEY':self.product_onevizion,'TRACKOR_KEY':self.issue_title},
                 fields=['TRACKOR_KEY', 'VQS_IT_STATUS', 'Version.VER_UAT_DATE']
                 )
         else:
             self.issue_list_request.read(
-                filters={'Product.TRACKOR_KEY':self.project_onevizion,'VQS_IT_STATUS':status},
+                filters={'Product.TRACKOR_KEY':self.product_onevizion,'VQS_IT_STATUS':status},
                 fields=['TRACKOR_KEY', 'VQS_IT_STATUS', 'VQS_IT_XITOR_NAME']
                 )
         response = self.issue_list_request.jsonData

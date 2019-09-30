@@ -12,7 +12,7 @@ project_upsource = password_data["projectUpsource"]
 url_onevizion = password_data["urlOneVizion"]
 login_onevizion = password_data["loginOneVizion"]
 pass_onevizion = password_data["passOneVizion"]
-project_onevizion = password_data["projectOneVizion"]
+product_onevizion = password_data["productOneVizion"]
 trackor_type = password_data["trackorType"]
 
-upsourceIntegration.Integration(url_upsource=url_upsource, login_upsource=login_upsource, pass_upsource=pass_upsource, project_upsource=project_upsource, url_onevizion=url_onevizion, login_onevizion=login_onevizion, pass_onevizion=pass_onevizion, project_onevizion=project_onevizion, trackor_type=trackor_type)
+upsourceIntegration.Integration(url_upsource=url_upsource, login_upsource=login_upsource, pass_upsource=pass_upsource, project_upsource=project_upsource, url_onevizion=url_onevizion, login_onevizion=login_onevizion, pass_onevizion=pass_onevizion, product_onevizion=product_onevizion, trackor_type=trackor_type)
