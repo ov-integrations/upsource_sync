@@ -15,11 +15,14 @@ Features
 - adds new commits to the reviews in master branch
 
 To start integration, you need to fill files
+
 settings_template.json:
+
 For Upsource:
 - URL to site (e.g., upsource.onevizion.com)
 - account username and password 
 - project (e.g., ov)
+
 For OneVizion:
 - URL to site (e.g., trackor.onevizion.com)
 - account username and password 
