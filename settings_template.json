@@ -1,0 +1,12 @@
+{
+"urlUpsource" : "url",
+"loginUpsource" : "login",
+"passUpsource" : "password",
+"projectUpsource" : "project",
+
+"urlOneVizion" : "url",
+"loginOneVizion" : "login",
+"passOneVizion" : "password",
+"projectOneVizion" : "project",
+"trackorType" : "type"
+}
