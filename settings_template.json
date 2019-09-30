@@ -1,12 +1,12 @@
 {
-"urlUpsource" : "url",
+"urlUpsource" : "upsource.onevizion.com",
 "loginUpsource" : "login",
 "passUpsource" : "password",
-"projectUpsource" : "project",
+"projectUpsource" : "ov",
 
-"urlOneVizion" : "url",
+"urlOneVizion" : "trackor.onevizion.com",
 "loginOneVizion" : "login",
 "passOneVizion" : "password",
-"projectOneVizion" : "project",
-"trackorType" : "type"
+"productOneVizion" : "OneVizion",
+"trackorType" : "Issue"
 }
