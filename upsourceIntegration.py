@@ -377,12 +377,12 @@ class Integration(object):
         current_release = str(datetime_object.strftime('%m/%d/%Y'))
         
         sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
-        next_two_week = str((datetime_object + timedelta(days=13)).strftime('%m/%d/%Y'))
+        next_two_week = str((datetime.now() + timedelta(days=13)).strftime('%m/%d/%Y'))
 
         if current_release >= sysdate and current_release <= next_two_week:
             self.add_review_label('1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
-        elif current_release < sysdate:
+        elif current_release < sysdate or current_release > next_two_week:
             self.delete_review_label('1ce36262-9d48-4b0e-93bd-d93722776e45', 'current release')
 
     #Removes labels from closed reviews and stop branch tracking
