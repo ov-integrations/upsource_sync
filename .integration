@@ -1,4 +1,4 @@
 command = python StartIntegration.py
 settings_file_name = settings_template.json
-default_schedule = 0 * * * * ?
-read_from_stdout = true
+default_schedule = 0 0/10 * * * ?
+read_from_stdout = false
