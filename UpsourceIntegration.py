@@ -34,19 +34,19 @@ class Integration(object):
             self.issue_title = issue['TRACKOR_KEY']
             self.issue_summary = issue['VQS_IT_XITOR_NAME']
 
-            if "iOS" not in self.issue_title and "Android" not in self.issue_title:
-                revision_list = self.check_revision()
+            revision_list = self.check_revision()
 
-                if revision_list is not None:
-                    review = self.get_reviews(self.issue_title)
+            if 'revision' in revision_list:
+                revision_list = revision_list['revision']
+                review = self.get_reviews(self.issue_title)
 
-                    if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
-                        review_status = review[0]['state']
+                if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
+                    review_status = review[0]['state']
 
-                        if review_status == 2:
-                            self.change_issue_status(review)
-                    else:
-                        self.create_review(revision_list)
+                    if review_status == 2:
+                        self.change_issue_status(review)
+                else:
+                    self.create_review(revision_list)
 
         self.check_open_reviews()
         self.check_closed_reviews()
@@ -91,9 +91,7 @@ class Integration(object):
         url = self.url_upsource + '~rpc/getRevisionsListFiltered'
         data = {"projectId":self.project_upsource, "limit":100, "query":self.issue_title}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-        response = answer.json()
-        readble_json = response['result']['revision']
-        return readble_json
+        return answer.json()['result']
 
     def change_issue_status(self, review):
         review_updated_at = str(review[0]['updatedAt'])[:-3]
@@ -303,18 +301,18 @@ class Integration(object):
 
     #Attaches revision to review
     def add_revision_to_review(self):
-        if "iOS" not in self.issue_title and "Android" not in self.issue_title:
-            revision_list = self.check_revision()
+        revision_list = self.check_revision()
 
-            if revision_list is not None:
-                for revision in revision_list:
-                    revision_id = revision['revisionId']
-                    revision_title = revision['revisionCommitMessage']
+        if 'revision' in revision_list:
+            revision_list = revision_list['revision']
+            for revision in revision_list:
+                revision_id = revision['revisionId']
+                revision_title = revision['revisionCommitMessage']
 
-                    if 'Merge ' not in revision_title:
-                        url = self.url_upsource + '~rpc/addRevisionToReview'
-                        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "revisionId":revision_id}
-                        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+                if 'Merge ' not in revision_title:
+                    url = self.url_upsource + '~rpc/addRevisionToReview'
+                    data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "revisionId":revision_id}
+                    requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Added participants in review
     def setting_participants(self):
