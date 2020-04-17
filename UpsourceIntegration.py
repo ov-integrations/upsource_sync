@@ -37,7 +37,7 @@ class Integration(object):
             revision_list = self.check_revision()
 
             if 'revision' in revision_list:
-                revision_list = revision_list['revision']
+                revision_in_revision_list = revision_list['revision']
                 review = self.get_reviews(self.issue_title)
 
                 if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
@@ -46,7 +46,7 @@ class Integration(object):
                     if review_status == 2:
                         self.change_issue_status(review)
                 else:
-                    self.create_review(revision_list)
+                    self.create_review(revision_in_revision_list)
 
         self.check_open_reviews()
         self.check_closed_reviews()
@@ -304,8 +304,8 @@ class Integration(object):
         revision_list = self.check_revision()
 
         if 'revision' in revision_list:
-            revision_list = revision_list['revision']
-            for revision in revision_list:
+            revision_in_revision_list = revision_list['revision']
+            for revision in revision_in_revision_list:
                 revision_id = revision['revisionId']
                 revision_title = revision['revisionCommitMessage']
 
