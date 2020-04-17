@@ -1,12 +1,37 @@
 {
-"urlUpsource" : "url",
-"loginUpsource" : "login",
-"passUpsource" : "password",
-"projectUpsource" : "project name",
+    "urlOneVizion": "url",
+    "loginOneVizion": "login",
+    "passOneVizion": "password",
+    "productOneVizion": "product name",
+    "trackorType": "trackor type",
 
-"urlOneVizion" : "url",
-"loginOneVizion" : "login",
-"passOneVizion" : "password",
-"productOneVizion" : "product name",
-"trackorType" : "trackor type"
+    "urlUpsource": "url",
+    "loginUpsource": "login",
+    "passUpsource": "password",
+    "projectUpsource": "project name",
+    "departments": [
+        {
+            "name": "department name1",
+            "filePatterns": [
+                "File Extension1"
+            ],
+            "reviewers": [
+                {
+                    "name": "Full Name1"
+                }
+            ]
+        },
+        {
+            "name": "department name2",
+            "filePatterns": [
+                "File Extension2",
+                "File Extension3"
+            ],
+            "reviewers": [
+                {
+                    "name": "Full Name2"
+                }
+            ]
+        }
+    ]
 }

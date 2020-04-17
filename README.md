@@ -4,7 +4,7 @@
 Integrates [JetBrains Upsource](https://www.jetbrains.com/upsource/) code review tool with OneVizion Issue Trackor
 
 Requirements
-- python version 3.7.2
+- python version 3.7.2 or later
 - python requests library (pip install requests)
 - python onevizion library (pip install onevizion)
 
@@ -13,16 +13,45 @@ Features
 - updates issue status when code review is closed
 - supports git feature branches (branch tracking reviews are created)
 - adds new commits to the reviews in master branch
+- assigns reviewer based on the file type
 
-To start integration, you need to fill file settings.json:
+To start integration, you need to fill file settings.json, example:
+```
+{
+    "urlOneVizion": "trackor.onevizion.com",
+    "loginOneVizion": "login",
+    "passOneVizion": "********",
+    "productOneVizion": "OneVizion",
+    "trackorType": "Issue",
 
-For Upsource:
-- URL to site (e.g., upsource.onevizion.com)
-- account username and password 
-- project (e.g., ov)
-
-For OneVizion:
-- URL to site (e.g., trackor.onevizion.com)
-- account username and password 
-- product (e.g., OneVizion)
-- trackor type (e.g., Issue)
+    "urlUpsource": "upsource.onevizion.com",
+    "loginUpsource": "login",
+    "passUpsource": "********",
+    "projectUpsource": "ov",
+    "departments": [
+        {
+            "name": "backend",
+            "filePatterns": [
+                "java"
+            ],
+            "reviewers": [
+                {
+                    "name": "Full Name1"
+                }
+            ]
+        },
+        {
+            "name": "frontend",
+            "filePatterns": [
+                "js",
+                "css"
+            ],
+            "reviewers": [
+                {
+                    "name": "Full Name2"
+                }
+            ]
+        }
+    ]
+}
+```

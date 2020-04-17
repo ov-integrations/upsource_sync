@@ -9,10 +9,12 @@ from datetime import datetime, timedelta
 
 class Integration(object):
 
-    def __init__(self, url_upsource="", login_upsource="", pass_upsource="", project_upsource="", url_onevizion="", login_onevizion="", pass_onevizion="", product_onevizion="", trackor_type=""):
+    def __init__(self, url_upsource="", login_upsource="", pass_upsource="", project_upsource="", departments="",
+                     url_onevizion="", login_onevizion="", pass_onevizion="", product_onevizion="", trackor_type=""):
         self.url_upsource = self.url_setting(url_upsource)        
         self.project_upsource = project_upsource
         self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
+        self.departments = departments
 
         self.url_onevizion = self.url_setting(url_onevizion)
         self.product_onevizion = product_onevizion
@@ -21,8 +23,6 @@ class Integration(object):
 
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
         self.log = self.get_logger()
-
-        self.start_integration()
 
     def start_integration(self):
         self.log.info('Started upsource integration')
@@ -233,9 +233,9 @@ class Integration(object):
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "branch":branch}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
-    #Close review if issue status = Ready for Test/Merge
     def check_open_reviews(self):
         review_list = self.get_reviews('state: open')
+        upsource_users = self.work_with_upsource_users()
         for review_data in review_list:
             self.review_id = review_data['reviewId']['reviewId']
 
@@ -269,12 +269,11 @@ class Integration(object):
 
                 else:
                     self.issue_uat_date = issue[0]['Version.VER_UAT_DATE']
-                    self.review_participants = review_data['participants']
                     review_status = review_data['state']
 
                     if review_status == 1:            
                         self.setting_branch_tracking()
-                        self.setting_participants()
+                        self.setting_participants(review_data, upsource_users)
 
                         if self.issue_uat_date != None:
                             self.setting_current_release_label()
@@ -285,6 +284,28 @@ class Integration(object):
 
                     elif issue_status == 'Ready for Review':
                         self.delete_review_label('WIP', 'work in progress')
+
+    def work_with_upsource_users(self):
+        reviewers_list = []
+        for reviewer_upsource in self.departments:
+            reviewers = reviewer_upsource['reviewers']
+            reviewer_patterns = reviewer_upsource['filePatterns']
+
+            for reviewer in reviewers:
+                reviewer_name = reviewer['name']
+                upsource_user = self.get_upsource_user(reviewer_name)
+                if 'infos' in upsource_user:
+                    reviewer_id = upsource_user['infos'][0]['userId']
+                    reviewers_list.append({'reviewer_id': reviewer_id, 'reviewer_name': reviewer_name,
+                                           'reviewer_extension': reviewer_patterns})
+
+        return reviewers_list
+
+    def get_upsource_user(self, reviewer_name):
+        url = self.url_upsource + '~rpc/findUsers'
+        data = {'projectId': self.project_upsource, 'pattern': reviewer_name, 'limit': 100}
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        return answer.json()['result']
 
     #Start branch tracking if review in a branch otherwise attaches revision to review
     def setting_branch_tracking(self):
@@ -315,63 +336,48 @@ class Integration(object):
                     requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Added participants in review
-    def setting_participants(self):
-        reviewer_id = ''
-        for participant in self.review_participants:
-            if participant['role'] == 1:
-                self.author_id = participant['userId']
+    def setting_participants(self, review_data, upsource_users):
+        review_participants_list = []
+        for review_participant in review_data['participants']:
+            review_participants_list.append(review_participant['userId'])
 
-            if participant['role'] == 2:
-                reviewer_id = participant['userId']
+        file_list = self.work_with_review_file_extension()
+        for file_extension in file_list:
+            for reviewer_data in upsource_users:
+                reviewer_id = reviewer_data['reviewer_id']
+                reviewer_extension = reviewer_data['reviewer_extension']
+                if file_extension in reviewer_extension and reviewer_id not in review_participants_list:
+                    self.add_reviewer(reviewer_id)
+                    break
 
-        if reviewer_id == '':
-             self.get_review_file_extension()
+    def work_with_review_file_extension(self):
+        changed_file = self.get_review_file_extension()
+        file_list = []
+        for diff_file in changed_file:
+            file_path = diff_file['fileIcon']
+            file_extension = file_path[file_path.rfind(':')+1:]
+
+        if file_extension != '' and file_extension not in file_list:
+                file_list.append(file_extension)
+
+        return file_list
 
     #Returns the code ownership summary for a given review
     def get_review_file_extension(self):
         url = self.url_upsource + '~rpc/getReviewSummaryChanges'
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "revisions":{"selectAll":True}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-        response = answer.json()
-        changed_file = response['result']['diff']['diff']
-
-        file_list = []
-        for diff_file in changed_file:
-            file_path = diff_file['fileIcon']
-            file_extension = file_path[file_path.rfind(':')+1:]
-
-            if file_extension in ['js', 'css', 'html', 'jsp', 'tag']:
-                file_extension = 'js'
-
-            if file_extension not in file_list:
-                file_list.insert(0, file_extension)
-
-            if 'sql' in file_list and 'java' in file_list and 'js' in file_list:
-                break
-
-        self.add_reviewer(file_list)
+        changed_file = answer.json()['result']['diff']
+        if 'diff' in changed_file:
+            return changed_file['diff']
+        else:
+            return []
 
     #Add a reviewer to the review
-    def add_reviewer(self, file_list):
-        user_id = ""
-
-        for file_extension in file_list:
-            if file_extension == 'sql':
-                user_id = "840cb243-75a1-4bba-8fad-5859779db1df"
-                self.log.info('Mikhail Knyazev added in reviewers')
-
-            elif file_extension == 'java':
-                user_id = "c7b9b297-d3e0-4148-af30-df20d676a0fd"
-                self.log.info('Dmitry Nesmelov added in reviewers')
-
-            elif file_extension in ['js', 'css', 'html', 'jsp', 'tag']:
-                user_id = "9db3e4ca-5167-46b8-b114-5126af78d41c"
-                self.log.info('Alex Yuzvyak added in reviewers')
-
-            if user_id not in ["", self.author_id]:
-                url = self.url_upsource + '~rpc/addParticipantToReview'
-                data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "participant":{"userId":user_id, "role":2}}
-                requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+    def add_reviewer(self, reviewer_id):
+        url = self.url_upsource + '~rpc/addParticipantToReview'
+        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "participant":{"userId":reviewer_id, "role":2}}
+        requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
     #Checks release date and adds or removes label
     def setting_current_release_label(self):                        
