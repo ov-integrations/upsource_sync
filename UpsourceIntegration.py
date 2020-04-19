@@ -235,7 +235,7 @@ class Integration(object):
 
     def check_open_reviews(self):
         review_list = self.get_reviews('state: open')
-        upsource_users = self.work_with_upsource_users()
+        upsource_users = self.get_upsource_users()
         for review_data in review_list:
             self.review_id = review_data['reviewId']['reviewId']
 
@@ -285,27 +285,33 @@ class Integration(object):
                     elif issue_status == 'Ready for Review':
                         self.delete_review_label('WIP', 'work in progress')
 
-    def work_with_upsource_users(self):
+    def get_upsource_users(self):
         reviewers_list = []
-        for reviewer_upsource in self.departments:
-            reviewers = reviewer_upsource['reviewers']
-            reviewer_patterns = reviewer_upsource['filePatterns']
+        for department in self.departments:
+            department_reviewers = department['reviewers']
+            department_fie_patterns = department['filePatterns']
 
-            for reviewer in reviewers:
-                reviewer_name = reviewer['name']
-                upsource_user = self.get_upsource_user(reviewer_name)
+            for reviewer in department_reviewers:
+                try:
+                    upsource_user = self.find_user_in_upsource(reviewer)
+                except Exception as e:
+                    self.log('Failed to find_user_in_upsource. Exception [%s]' % str(e))
+
                 if 'infos' in upsource_user:
                     reviewer_id = upsource_user['infos'][0]['userId']
-                    reviewers_list.append({'reviewer_id': reviewer_id, 'reviewer_name': reviewer_name,
-                                           'reviewer_extension': reviewer_patterns})
+                    reviewers_list.append({'reviewer_id': reviewer_id, 'reviewer_name': reviewer,
+                                           'reviewer_extension': department_fie_patterns})
 
         return reviewers_list
 
-    def get_upsource_user(self, reviewer_name):
+    def find_user_in_upsource(self, reviewer_name):
         url = self.url_upsource + '~rpc/findUsers'
         data = {'projectId': self.project_upsource, 'pattern': reviewer_name, 'limit': 100}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
-        return answer.json()['result']
+        if answer.ok:
+            return answer.json()['result']
+        else:
+            raise Exception(answer.text)
 
     #Start branch tracking if review in a branch otherwise attaches revision to review
     def setting_branch_tracking(self):
@@ -337,33 +343,34 @@ class Integration(object):
 
     #Added participants in review
     def setting_participants(self, review_data, upsource_users):
-        review_participants_list = []
-        for review_participant in review_data['participants']:
-            review_participants_list.append(review_participant['userId'])
+        if len(upsource_users) > 0:
+            review_participants_list = []
+            for review_participant in review_data['participants']:
+                review_participants_list.append(review_participant['userId'])
 
-        file_list = self.work_with_review_file_extension()
-        for file_extension in file_list:
-            for reviewer_data in upsource_users:
-                reviewer_id = reviewer_data['reviewer_id']
-                reviewer_extension = reviewer_data['reviewer_extension']
-                if file_extension in reviewer_extension and reviewer_id not in review_participants_list:
-                    self.add_reviewer(reviewer_id)
-                    break
+            extension_list = self.get_review_file_extensions()
+            for extension in extension_list:
+                for user_data in upsource_users:
+                    user_id = user_data['reviewer_id']
+                    user_extension = user_data['reviewer_extension']
+                    if extension in user_extension and user_id not in review_participants_list:
+                        self.add_reviewer(user_id)
+                        break
 
-    def work_with_review_file_extension(self):
-        changed_file = self.get_review_file_extension()
-        file_list = []
-        for diff_file in changed_file:
-            file_path = diff_file['fileIcon']
-            file_extension = file_path[file_path.rfind(':')+1:]
+    def get_review_file_extensions(self):
+        changed_files = self.get_review_summary_changes()
+        extension_list = []
+        for changed_file in changed_files:
+            file_icon = changed_file['fileIcon']
+            file_extension = file_icon[file_icon.rfind(':')+1:]
 
-        if file_extension != '' and file_extension not in file_list:
-                file_list.append(file_extension)
+        if file_extension != '' and file_extension not in extension_list:
+                extension_list.append(file_extension)
 
-        return file_list
+        return extension_list
 
     #Returns the code ownership summary for a given review
-    def get_review_file_extension(self):
+    def get_review_summary_changes(self):
         url = self.url_upsource + '~rpc/getReviewSummaryChanges'
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "revisions":{"selectAll":True}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)

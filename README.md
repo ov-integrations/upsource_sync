@@ -35,9 +35,7 @@ To start integration, you need to fill file settings.json, example:
                 "java"
             ],
             "reviewers": [
-                {
-                    "name": "Full Name1"
-                }
+                "Full Name1"
             ]
         },
         {
@@ -47,9 +45,7 @@ To start integration, you need to fill file settings.json, example:
                 "css"
             ],
             "reviewers": [
-                {
-                    "name": "Full Name2"
-                }
+                "Full Name2"
             ]
         }
     ]

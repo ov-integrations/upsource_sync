@@ -4,7 +4,7 @@
     "passOneVizion": "password",
     "productOneVizion": "product name",
     "trackorType": "trackor type",
-
+    
     "urlUpsource": "url",
     "loginUpsource": "login",
     "passUpsource": "password",
@@ -16,9 +16,7 @@
                 "File Extension1"
             ],
             "reviewers": [
-                {
-                    "name": "Full Name1"
-                }
+                "Full Name1"
             ]
         },
         {
@@ -28,9 +26,7 @@
                 "File Extension3"
             ],
             "reviewers": [
-                {
-                    "name": "Full Name2"
-                }
+                "Full Name2"
             ]
         }
     ]
