@@ -12,10 +12,10 @@
     "departments": [
         {
             "name": "department name1",
-            "filePatterns": [
+            "filePatternssssssssssssssssss": [
                 "File Extension1"
             ],
-            "reviewers": [
+            "reviewerssssssssssssssss": [
                 "Full Name1"
             ]
         },
@@ -25,7 +25,7 @@
                 "File Extension2",
                 "File Extension3"
             ],
-            "reviewers": [
+            "reviewerssssssssssssss": [
                 "Full Name2"
             ]
         }
