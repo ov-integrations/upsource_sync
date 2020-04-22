@@ -36,7 +36,7 @@ class Integration(object):
 
             revision_list = self.check_revision()
 
-            if 'revision' in revision_list:
+            if revision_list is not None and 'revision' in revision_list:
                 revision_in_revision_list = revision_list['revision']
                 review = self.get_reviews(self.issue_title)
 
@@ -330,7 +330,7 @@ class Integration(object):
     def add_revision_to_review(self):
         revision_list = self.check_revision()
 
-        if 'revision' in revision_list:
+        if revision_list is not None and 'revision' in revision_list:
             revision_in_revision_list = revision_list['revision']
             for revision in revision_in_revision_list:
                 revision_id = revision['revisionId']
