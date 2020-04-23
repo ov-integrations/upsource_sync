@@ -364,7 +364,7 @@ class Integration(object):
             file_icon = changed_file['fileIcon']
             file_extension = file_icon[file_icon.rfind(':')+1:]
 
-        if file_extension != '' and file_extension not in extension_list:
+            if file_extension != '' and file_extension not in extension_list:
                 extension_list.append(file_extension)
 
         return extension_list
