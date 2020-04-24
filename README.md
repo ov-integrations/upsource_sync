@@ -14,6 +14,11 @@ Features
 - supports git feature branches (branch tracking reviews are created)
 - adds new commits to the reviews in master branch
 - assigns reviewer based on the file type
+- adds and removes review labels:
+  + when creating a review, XXX label depending on the type of code will be added 
+  + when concern raised, !XXX label related to this reviewer will be added, XXX label will be removed
+  + label "work in progress" is added when the Issue status changed back to "In Process"
+  + label "current release" is added when started UAT release and lasts 2 weeks, after which it is deleted
 
 To start integration, you need to fill file settings.json, example:
 ```
@@ -34,6 +39,7 @@ To start integration, you need to fill file settings.json, example:
             "filePatterns": [
                 "java"
             ],
+            "reviewLabel" : "label name1",
             "reviewers": [
                 "Full Name1"
             ]
@@ -44,6 +50,7 @@ To start integration, you need to fill file settings.json, example:
                 "js",
                 "css"
             ],
+            "reviewLabel" : "label name2",
             "reviewers": [
                 "Full Name2"
             ]

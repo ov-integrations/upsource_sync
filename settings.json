@@ -15,6 +15,7 @@
             "filePatterns": [
                 "File Extension1"
             ],
+            "reviewLabel" : "label name1",
             "reviewers": [
                 "Full Name1"
             ]
@@ -25,6 +26,7 @@
                 "File Extension2",
                 "File Extension3"
             ],
+            "reviewLabel" : "label name2",
             "reviewers": [
                 "Full Name2"
             ]

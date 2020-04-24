@@ -16,8 +16,6 @@ pass_onevizion = password_data["passOneVizion"]
 product_onevizion = password_data["productOneVizion"]
 trackor_type = password_data["trackorType"]
 
-upsource_integration = Integration(url_upsource=url_upsource, login_upsource=login_upsource, pass_upsource=pass_upsource,
-                                project_upsource=project_upsource, departments=departments, url_onevizion=url_onevizion,
-                                login_onevizion=login_onevizion, pass_onevizion=pass_onevizion, product_onevizion=product_onevizion,
-                                trackor_type=trackor_type)
+upsource_integration = Integration(url_upsource, login_upsource, pass_upsource, project_upsource, departments,
+                                   url_onevizion, login_onevizion, pass_onevizion, product_onevizion, trackor_type)
 upsource_integration.start_integration()
