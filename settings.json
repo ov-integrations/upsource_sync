@@ -9,24 +9,22 @@
     "loginUpsource": "login",
     "passUpsource": "password",
     "projectUpsource": "project name",
-    "departments": [
+    "reviewScopes": [
         {
-            "name": "department name1",
+            "label" : "label name1",
             "filePatterns": [
                 "File Extension1"
             ],
-            "reviewLabel" : "label name1",
             "reviewers": [
                 "Full Name1"
             ]
         },
         {
-            "name": "department name2",
+            "label" : "label name2",
             "filePatterns": [
                 "File Extension2",
                 "File Extension3"
             ],
-            "reviewLabel" : "label name2",
             "reviewers": [
                 "Full Name2"
             ]

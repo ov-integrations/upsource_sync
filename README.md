@@ -18,7 +18,7 @@ Features
   + when creating a review, XXX label depending on the type of code will be added 
   + when concern raised, !XXX label related to this reviewer will be added, XXX label will be removed
   + label "work in progress" is added when the Issue status changed back to "In Process"
-  + label "current release" is added when started UAT release and lasts 2 weeks, after which it is deleted
+  + label "current release" is added, when related Issue targeted for the next release
 
 To start integration, you need to fill file settings.json, example:
 ```
@@ -35,22 +35,20 @@ To start integration, you need to fill file settings.json, example:
     "projectUpsource": "ov",
     "departments": [
         {
-            "name": "backend",
+            "label" : "label name1",
             "filePatterns": [
                 "java"
             ],
-            "reviewLabel" : "label name1",
             "reviewers": [
                 "Full Name1"
             ]
         },
         {
-            "name": "frontend",
+            "label" : "label name2",
             "filePatterns": [
                 "js",
                 "css"
             ],
-            "reviewLabel" : "label name2",
             "reviewers": [
                 "Full Name2"
             ]

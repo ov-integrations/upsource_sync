@@ -12,12 +12,12 @@ class Integration(object):
     ROLE_IN_REVIEW_REVIEWER = 2
     PARTICIPANT_STATE_REJECTED = 4
 
-    def __init__(self, url_upsource="", login_upsource="", pass_upsource="", project_upsource="", departments="",
+    def __init__(self, url_upsource="", login_upsource="", pass_upsource="", project_upsource="", review_scopes="",
                  url_onevizion="", login_onevizion="", pass_onevizion="", product_onevizion="", trackor_type=""):
         self.url_upsource = self.url_setting(url_upsource)        
         self.project_upsource = project_upsource
         self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
-        self.departments = departments
+        self.review_scopes = review_scopes
 
         self.url_onevizion = self.url_setting(url_onevizion)
         self.product_onevizion = product_onevizion
@@ -274,12 +274,12 @@ class Integration(object):
 
     def get_upsource_users(self):
         reviewers_list = []
-        for department in self.departments:
-            department_reviewers = department['reviewers']
-            department_file_patterns = department['filePatterns']
-            department_label = department['reviewLabel']
+        for review_scope in self.review_scopes:
+            review_scope_reviewers = review_scope['reviewers']
+            review_scope_file_patterns = review_scope['filePatterns']
+            review_scope_label = review_scope['label']
 
-            for reviewer in department_reviewers:
+            for reviewer in review_scope_reviewers:
                 try:
                     upsource_user = self.find_user_in_upsource(reviewer)
                 except Exception as e:
@@ -289,7 +289,7 @@ class Integration(object):
                 if upsource_user is not None and 'infos' in upsource_user:
                     reviewer_id = upsource_user['infos'][0]['userId']
                     reviewers_list.append({'reviewer_id': reviewer_id, 'reviewer_name': reviewer,
-                                           'reviewer_extension': department_file_patterns, 'reviewer_label':department_label})
+                                           'reviewer_extension': review_scope_file_patterns, 'reviewer_label':review_scope_label})
 
         return reviewers_list
 
@@ -491,9 +491,9 @@ class Integration(object):
         self.labels_list = self.check_review_labels()
         label_names_list = self.get_labels_list('')
 
-        for department in self.departments:
-            ready_for_review_label = department['reviewLabel']
-            raised_concern_label = '!' + department['reviewLabel']
+        for review_scope in self.review_scopes:
+            ready_for_review_label = review_scope['label']
+            raised_concern_label = '!' + review_scope['label']
             if ready_for_review_label not in label_names_list:
                 try:
                     self.create_or_edit_review_label(ready_for_review_label, LabelColor.GREEN.value)
