@@ -236,17 +236,8 @@ class Integration(object):
 
             for review_data in review_list:
                 self.review_id = review_data['reviewId']['reviewId']
-
-                review_title = review_data['title']
-                if 'Review of ' in review_title:
-                    start = review_title.find('Review of ')
-                    finish = review_title.find('-')
-                    self.issue_title = review_title[start+10:finish+7]
-                else:
-                    self.issue_title = review_title[review_title.find('') : review_title.find(' ')]
-
+                self.issue_title = self.get_issue_title(review_data['title'])
                 issue = self.check_issue('')
-
                 if len(issue) > 0:
                     issue_status = issue[0]['VQS_IT_STATUS']
                     issue_uat_date = issue[0]['Version.VER_UAT_DATE']
@@ -270,7 +261,7 @@ class Integration(object):
                             self.setting_branch_tracking()
                             if len(upsource_users) > 0:
                                 self.setting_participants(upsource_users)
-                                self.setting_labels(label_names_list, issue_uat_date, issue_status, upsource_users)
+                                self.set_labels_for_review(label_names_list, issue_uat_date, issue_status, upsource_users)
 
     def get_upsource_users(self):
         reviewers_list = []
@@ -301,6 +292,16 @@ class Integration(object):
             return answer.json()['result']
         else:
             raise Exception(answer.text)
+
+    def get_issue_title(self, review_title):
+        if 'Review of ' in review_title:
+            start = review_title.find('Review of ')
+            finish = review_title.find('-')
+            issue_title = review_title[start+10:finish+7]
+        else:
+            issue_title = review_title[review_title.find('') : review_title.find(' ')]
+
+        return issue_title
 
     #Start branch tracking if review in a branch otherwise attaches revision to review
     def setting_branch_tracking(self):
@@ -377,7 +378,7 @@ class Integration(object):
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "participant":{"userId":reviewer_id, "role":2}}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
-    def setting_labels(self, label_names_list, issue_uat_date, issue_status, upsource_users):
+    def set_labels_for_review(self, label_names_list, issue_uat_date, issue_status, upsource_users):
         review_data = self.check_review(self.review_id)
         if isinstance(review_data, list) and len(review_data) > 0 and 'reviewId' in review_data[0]:
             review_participants = []

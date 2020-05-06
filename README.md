@@ -9,8 +9,8 @@ Requirements
 - python onevizion library (pip install onevizion)
 
 Features
-- creates new code reviews based for "Ready for Review" issues
-- updates issue status when code review is closed
+- creates new code reviews for "Ready for Review" Issues
+- updates Issue status when code review is closed
 - supports git feature branches (branch tracking reviews are created)
 - adds new commits to the reviews in master branch
 - assigns reviewer based on the file type
@@ -18,7 +18,7 @@ Features
   + when creating a review, XXX label depending on the type of code will be added 
   + when concern raised, !XXX label related to this reviewer will be added, XXX label will be removed
   + label "work in progress" is added when the Issue status changed back to "In Process"
-  + label "current release" is added, when related Issue targeted for the next release
+  + label "current release" is added, when related Issue targeted for the next release and will be removed, when current release is tested in UAT and released in PROD
 
 To start integration, you need to fill file settings.json, example:
 ```
