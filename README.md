@@ -33,7 +33,7 @@ To start integration, you need to fill file settings.json, example:
     "loginUpsource": "login",
     "passUpsource": "********",
     "projectUpsource": "ov",
-    "departments": [
+    "reviewScopes": [
         {
             "label" : "label name1",
             "filePatterns": [
