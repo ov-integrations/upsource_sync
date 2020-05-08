@@ -51,7 +51,6 @@ class Integration(object):
 
         self.log.info('Finished upsource integration')
 
-    #Checks issue status
     def check_issue(self, status):
         if status == '':
             self.issue_list_request.read(
@@ -74,7 +73,7 @@ class Integration(object):
 
         return revision_list
 
-    #Returns the list of revisions that match the given search query
+    # Returns the list of revisions that match the given search query
     def filtered_revision_list(self):
         url = self.url_upsource + '~rpc/getRevisionsListFiltered'
         data = {"projectId":self.project_upsource, "limit":100, "query":self.issue_title}
@@ -115,11 +114,10 @@ class Integration(object):
 
                 if branch_in_review != 'master':
                     self.stop_branch_tracking(branch_in_review)
-                    self.update_status('Ready for Merge')
+                    self.update_issue_status('Ready for Merge')
                 else:
-                    self.update_status('Ready for Test')
+                    self.update_issue_status('Ready for Test')
 
-    #Return branch for issue
     def get_branch(self):
         url = self.url_upsource + '~rpc/getBranches'
         data = {"projectId":self.project_upsource, "limit":100, "query":self.issue_title}
@@ -127,7 +125,6 @@ class Integration(object):
         readble_json = answer.json()
         return readble_json['result']
 
-    #Create review
     def create_review(self, revision_list):
         for revision in revision_list:
             if 'revisionCommitMessage' in revision:
@@ -154,13 +151,11 @@ class Integration(object):
 
             self.log.info('Review for ' + str(self.issue_title) + ' created')
 
-    #Removes a default reviewer from a review
     def delete_default_reviewer(self):
         url = self.url_upsource + '~rpc/removeParticipantFromReview'
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "participant":{"userId":"653c3d2e-394f-4c6b-8757-3e070c78c910", "role": Integration.ROLE_IN_REVIEW_REVIEWER}}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
-    #Adds a review url to a issue
     def add_url_to_issue(self):
         self.issue_list_request.update(
             trackorId=self.issue_id,
@@ -176,7 +171,6 @@ class Integration(object):
 
         return review
 
-    #Returns review data
     def get_reviews(self, query):
         url = self.url_upsource + '~rpc/getReviews'
         data = {"projectId":self.project_upsource, "limit":100, "query":query}
@@ -189,32 +183,27 @@ class Integration(object):
         else:
             raise Exception(answer.text)
 
-    #Change a review to a review for a branch
     def start_branch_tracking(self, branch):
         url = self.url_upsource + '~rpc/startBranchTracking'
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "branch":branch}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
-    #Adds a label to a review
     def add_review_label(self, label_id, label_name):
         url = self.url_upsource + '~rpc/addReviewLabel'
         data = {"projectId":self.project_upsource, "reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "label":{"id":label_id, "name":label_name}}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
-    #Delete a label to a review
     def delete_review_label(self, label_id, label_name):
         url = self.url_upsource + '~rpc/removeReviewLabel'
         data = {"projectId":self.project_upsource, "reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "label":{"id":label_id, "name":label_name}}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
-    #Close or reopen review
     def close_or_reopen_review(self, status):
         url = self.url_upsource + '~rpc/closeReview'
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "isFlagged":status}
         requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
-    #Updates issue status
-    def update_status(self, status):
+    def update_issue_status(self, status):
         self.issue_list_request.update(
             trackorId=self.issue_id,
             fields={'VQS_IT_STATUS':status}
@@ -222,7 +211,6 @@ class Integration(object):
 
         self.log.info('Issue ' + str(self.issue_title) + ' updated status to ' + str(status))
 
-    #Stops branch tracking for a given review
     def stop_branch_tracking(self, branch):
         url = self.url_upsource + '~rpc/stopBranchTracking'
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "branch":branch}
@@ -257,10 +245,10 @@ class Integration(object):
                         self.log.info('Review ' + str(self.review_id) + ' closed')
 
                     else:
-                        if review_data['state'] == ReviewState.OPEN.value:            
-                            self.setting_branch_tracking()
+                        if review_data['state'] == ReviewState.OPENED.value:            
+                            self.set_branch_tracking_for_review()
                             if len(upsource_users) > 0:
-                                self.setting_participants(upsource_users)
+                                self.add_reviewers(upsource_users)
                                 self.set_labels_for_review(label_names_list, issue_uat_date, issue_status, upsource_users)
 
     def get_upsource_users(self):
@@ -303,8 +291,8 @@ class Integration(object):
 
         return issue_title
 
-    #Start branch tracking if review in a branch otherwise attaches revision to review
-    def setting_branch_tracking(self):
+    # Start branch tracking if review in a branch otherwise attaches revision to review
+    def set_branch_tracking_for_review(self):
         branch_in_review = self.get_branch()
         if 'branch' in branch_in_review:
             branch_in_review = branch_in_review['branch'][0]['name']
@@ -316,10 +304,8 @@ class Integration(object):
         else:
             self.add_revision_to_review()
 
-    #Attaches revision to review
     def add_revision_to_review(self):
         revision_list = self.check_revision()
-
         if revision_list is not None and 'revision' in revision_list:
             revision_in_revision_list = revision_list['revision']
             for revision in revision_in_revision_list:
@@ -331,8 +317,7 @@ class Integration(object):
                     data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "revisionId":revision_id}
                     requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
 
-    #Added participants in review
-    def setting_participants(self, upsource_users):
+    def add_reviewers(self, upsource_users):
         review_data = self.check_review(self.review_id)
         if isinstance(review_data, list) and len(review_data) > 0 and 'reviewId' in review_data[0]:
             review_participants_list = []
@@ -361,7 +346,7 @@ class Integration(object):
 
         return extension_list
 
-    #Returns the code ownership summary for a given review
+    # Returns the code ownership summary for a given review
     def get_review_summary_changes(self):
         url = self.url_upsource + '~rpc/getReviewSummaryChanges'
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "revisions":{"selectAll":True}}
@@ -372,7 +357,6 @@ class Integration(object):
         else:
             return []
 
-    #Add a reviewer to the review
     def add_reviewer(self, reviewer_id):
         url = self.url_upsource + '~rpc/addParticipantToReview'
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "participant":{"userId":reviewer_id, "role":2}}
@@ -407,7 +391,7 @@ class Integration(object):
                 label_id = label['label_id']
                 label_name = label['label_name']
                 if label_name == 'current release' and issue_uat_date != None:
-                    self.setting_current_release_label(issue_uat_date, label_id, label_name, review_labels_list)
+                    self.set_current_release_label(issue_uat_date, label_id, label_name, review_labels_list)
                     continue
                 if label_name == 'work in progress':
                     if issue_status == 'In Progress':
@@ -433,8 +417,8 @@ class Integration(object):
                                 self.add_review_label(label_id, label_name)
                         break
     
-    #Checks release date and adds or removes label
-    def setting_current_release_label(self, issue_uat_date, label_id, label_name, review_labels_list):
+    # Checks release date and adds or removes label
+    def set_current_release_label(self, issue_uat_date, label_id, label_name, review_labels_list):
         datetime_object = datetime.strptime(issue_uat_date, '%Y-%m-%d')
         current_release = str(datetime_object.strftime('%m/%d/%Y'))
         sysdate = str((datetime.now()).strftime('%m/%d/%Y'))
@@ -446,7 +430,7 @@ class Integration(object):
         elif current_release < sysdate or current_release > next_two_week and label_name in review_labels_list:
             self.delete_review_label(label_id, label_name)
 
-    #Removes labels from closed reviews and stop branch tracking
+    # Removes labels from closed reviews and stop branch tracking
     def check_closed_reviews(self):
         label_names_list = self.get_labels_list('closed')
         label_names_str = str(label_names_list)
@@ -556,7 +540,7 @@ class Integration(object):
 
         return url
 
-    #Returns logging to stdout
+    # Returns logging to stdout
     def get_logger(self, name=__file__, file='log.txt', encoding='utf-8'):
         log = logging.getLogger(name)
         log.setLevel(logging.DEBUG)
@@ -568,7 +552,7 @@ class Integration(object):
 
 
 class ReviewState(Enum):
-    OPEN = 1
+    OPENED = 1
     CLOSED = 2
 
 
