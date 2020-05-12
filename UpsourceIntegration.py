@@ -481,13 +481,13 @@ class Integration(object):
             raised_concern_label = '!' + review_scope['label']
             if ready_for_review_label not in label_names_list:
                 try:
-                    self.create_or_edit_review_label(ready_for_review_label, LabelColor.GREEN.value)
+                    self.create_or_edit_review_label(ready_for_review_label, str(LabelColor.GREEN.value))
                 except Exception as e:
                     self.log.warning('Failed to create_or_edit_review_label. Exception [%s]' % str(e))
 
             if raised_concern_label not in label_names_list:
                 try:
-                    self.create_or_edit_review_label(ready_for_review_label, LabelColor.RED.value)
+                    self.create_or_edit_review_label(ready_for_review_label, str(LabelColor.RED.value))
                 except Exception as e:
                     self.log.warning('Failed to create_or_edit_review_label. Exception [%s]' % str(e))
 
