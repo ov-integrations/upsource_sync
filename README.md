@@ -11,8 +11,9 @@ Requirements
 Features
 - creates new code reviews for "Ready for Review" Issues
 - updates Issue status when code review is closed
-- supports git feature branches (branch tracking reviews are created)
-- adds new commits to the reviews in master branch
+- adds new commits to the reviews (before adding commits, remembers the current statuses of reviewers and restores or updates them after adding commits)
+  + Accept/RaiseConcern status is saved if the added commits do not contain file patterns corresponding to the reviewer
+  + Accept/RaiseConcern status is not saved if the added commits contain file patterns corresponding to the reviewer
 - assigns reviewer based on the file type
 - adds and removes review labels:
   + when creating a review, XXX label depending on the type of code will be added 
@@ -30,27 +31,34 @@ To start integration, you need to fill file settings.json, example:
     "trackorType": "Issue",
 
     "urlUpsource": "upsource.onevizion.com",
+    "userNameUpsource": "Trackor Integration",
     "loginUpsource": "login",
     "passUpsource": "********",
     "projectUpsource": "ov",
     "reviewScopes": [
         {
-            "label" : "label name1",
+            "label": "Java",
             "filePatterns": [
                 "java"
             ],
             "reviewers": [
-                "Full Name1"
+                {
+                    "name": "Full Name1",
+                    "token": "token1"
+                }
             ]
         },
         {
-            "label" : "label name2",
+            "label": "Js",
             "filePatterns": [
                 "js",
                 "css"
             ],
             "reviewers": [
-                "Full Name2"
+                {
+                    "name": "Full Name2",
+                    "token": "token2"
+                }
             ]
         }
     ]
