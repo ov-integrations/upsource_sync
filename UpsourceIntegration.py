@@ -104,11 +104,14 @@ class Integration(object):
                     reopened_review = None
 
                 if reopened_review is not None:
-                    self.log.info('Review' + str(self.review_id) + ' reopened for Issue ' + self.issue_title)
+                    self.log.debug('Review' + str(self.review_id) + ' reopened for Issue ' + self.issue_title)
             else:
                 if 'labels' in review:
                     for label in review[0]['labels']:
-                        self.check_add_or_remove_label(label['id'], label['name'], 'remove')
+                        try:
+                            self.add_or_remove_review_label(label['id'], label['name'], 'remove')
+                        except Exception as e:
+                            self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
 
                 if branch == 'master':
                     self.update_issue_status('Ready for Test')
@@ -211,12 +214,6 @@ class Integration(object):
         else:
             raise Exception(answer.text)
 
-    def check_add_or_remove_label(self, label_id, label_name, action):
-        try:
-            self.add_or_remove_review_label(label_id, label_name, action)
-        except Exception as e:
-            self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
-
     def add_or_remove_review_label(self, label_id, label_name, action):
         if action == 'add':
             url = self.url_upsource + '~rpc/addReviewLabel'
@@ -275,7 +272,7 @@ class Integration(object):
 
                         if closed_review is not None:
                             self.remove_labels_for_closed_review(review_data)
-                            self.log.info('Review ' + str(self.review_id) + ' closed for Issue ' + self.issue_title)
+                            self.log.debug('Review ' + str(self.review_id) + ' closed for Issue ' + self.issue_title)
                     else:
                         if review_data['state'] == ReviewState.OPENED.value:
                             if len(self.upsource_users) > 0:
@@ -515,10 +512,16 @@ class Integration(object):
                 if label_name == 'work in progress':
                     if issue_status == 'In Progress':
                         if label_name not in review_labels_list:
-                            self.check_add_or_remove_label(label_id, label_name, 'add')
+                            try:
+                                self.add_or_remove_review_label(label_id, label_name, 'add')
+                            except Exception as e:
+                                self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
                     else:
                         if label_name in review_labels_list:
-                            self.check_add_or_remove_label(label_id, label_name, 'remove')
+                            try:
+                                self.add_or_remove_review_label(label_id, label_name, 'remove')
+                            except Exception as e:
+                                self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
                     continue
                 for reviewer in reviewer_participants_list:
                     user_state = reviewer['user_state']
@@ -526,14 +529,26 @@ class Integration(object):
                     if re.search(reviewer_label, label_name) is not None:
                         if user_state == Integration.PARTICIPANT_STATE_REJECTED:
                             if label_name not in review_labels_list and '!' in label_name:
-                                self.check_add_or_remove_label(label_id, label_name, 'add')
+                                try:
+                                    self.add_or_remove_review_label(label_id, label_name, 'add')
+                                except Exception as e:
+                                    self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
                             if label_name in review_labels_list and '!' not in label_name:
-                                self.check_add_or_remove_label(label_id, label_name, 'remove')
+                                try:
+                                    self.add_or_remove_review_label(label_id, label_name, 'remove')
+                                except Exception as e:
+                                    self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
                         else:
                             if label_name in review_labels_list and '!' in label_name:
-                                self.check_add_or_remove_label(label_id, label_name, 'remove')
+                                try:
+                                    self.add_or_remove_review_label(label_id, label_name, 'remove')
+                                except Exception as e:
+                                    self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
                             if label_name not in review_labels_list and '!' not in label_name:
-                                self.check_add_or_remove_label(label_id, label_name, 'add')
+                                try:
+                                    self.add_or_remove_review_label(label_id, label_name, 'add')
+                                except Exception as e:
+                                    self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
                         break
     
     # Checks release date and adds or removes label
@@ -544,10 +559,16 @@ class Integration(object):
         next_two_week = str((datetime.now() + timedelta(days=13)).strftime('%m/%d/%Y'))
 
         if current_release >= sysdate and current_release <= next_two_week and label_name not in review_labels_list:
-            self.check_add_or_remove_label(label_id, label_name, 'add')
+            try:
+                self.add_or_remove_review_label(label_id, label_name, 'add')
+            except Exception as e:
+                self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
 
         elif current_release < sysdate or current_release > next_two_week and label_name in review_labels_list:
-            self.check_add_or_remove_label(label_id, label_name, 'remove')
+            try:
+                self.add_or_remove_review_label(label_id, label_name, 'remove')
+            except Exception as e:
+                self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
 
     # Removes labels from closed reviews and stop branch tracking
     def check_closed_reviews(self):
@@ -565,7 +586,10 @@ class Integration(object):
         if 'labels' in review_data:
             review_labels = review_data['labels']
             for label in review_labels:
-                self.check_add_or_remove_label(label['id'], label['name'], 'remove')
+                try:
+                    self.add_or_remove_review_label(label['id'], label['name'], 'remove')
+                except Exception as e:
+                    self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
 
     def get_labels_list(self, status=''):
         label_names_list = []
