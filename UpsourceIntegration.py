@@ -108,10 +108,7 @@ class Integration(object):
             else:
                 if 'labels' in review:
                     for label in review[0]['labels']:
-                        try:
-                            self.add_or_remove_review_label(label['id'], label['name'], 'remove')
-                        except Exception as e:
-                            self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
+                        self.add_or_remove_review_label(label['id'], label['name'], 'remove')
 
                 if branch == 'master':
                     self.update_issue_status('Ready for Test')
@@ -144,10 +141,7 @@ class Integration(object):
             if isinstance(created_review, list) and len(created_review) > 0 and 'reviewId' in created_review[0]:
                 self.review_id = created_review[0]['reviewId']['reviewId']
                 self.add_url_to_issue()
-                try:
-                    self.rename_review()
-                except Exception as e:
-                    self.log.warning('Failed to rename_review. Exception [%s]' % str(e))
+                self.rename_review()
 
                 try:
                     upsource_user = self.find_user_in_upsource(self.user_name_upsource)
@@ -156,10 +150,7 @@ class Integration(object):
                     upsource_user = None
 
                 if upsource_user is not None:
-                    try:
-                        self.delete_default_reviewer(upsource_user['infos'][0]['userId'])
-                    except Exception as e:
-                        self.log.warning('Failed to delete_default_reviewer. Exception [%s]' % str(e))
+                    self.delete_default_reviewer(upsource_user['infos'][0]['userId'])
 
                 self.log.info('Review for ' + str(self.issue_title) + ' created')
 
@@ -177,7 +168,7 @@ class Integration(object):
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "text":str(self.issue_title) + ' ' + str(self.issue_summary)}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
-            raise Exception(answer.text)
+            self.log.warning('Failed to rename_review. Exception [%s]' % str(answer.text))
 
     def delete_default_reviewer(self, user_id):
         url = self.url_upsource + '~rpc/removeParticipantFromReview'
@@ -185,7 +176,7 @@ class Integration(object):
                 "participant":{"userId":user_id, "role": Integration.ROLE_IN_REVIEW_REVIEWER}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
-            raise Exception(answer.text)
+            self.log.warning('Failed to delete_default_reviewer. Exception [%s]' % str(answer.text))
 
     def add_url_to_issue(self):
         self.issue_list_request.update(
@@ -223,7 +214,7 @@ class Integration(object):
                 "label":{"id":label_id, "name":label_name}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
-            raise Exception(answer.text)
+            self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(answer.text))
 
     def close_or_reopen_review(self, status):
         url = self.url_upsource + '~rpc/closeReview'
@@ -247,7 +238,7 @@ class Integration(object):
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "branch":branch}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
-            raise Exception(answer.text)
+            self.log.warning('Failed to stop_branch_tracking. Exception [%s]' % str(answer.text))
 
     def check_open_reviews(self):
         review_list = self.check_review('state: open')
@@ -331,10 +322,7 @@ class Integration(object):
         if branch_in_review is not None and 'branch' in branch_in_review:
             branch = branch_in_review['branch'][0]['name']
             if 'reviewId' in branch_in_review['branch'][0]:
-                try:
-                    self.stop_branch_tracking(branch)
-                except Exception as e:
-                    self.log.warning('Failed to stop_branch_tracking. Exception [%s]' % str(e))
+                self.stop_branch_tracking(branch)
         else:
             branch = 'master'
 
@@ -360,10 +348,7 @@ class Integration(object):
 
                     if revision_review_info is not None and len(revision_review_info) == 0:
                         revision_id_list.append(revision_id)
-                        try:
-                            self.add_revision(revision_id)
-                        except Exception as e:
-                            self.log.warning('Failed to add_revision. Exception [%s]' % str(e))
+                        self.add_revision(revision_id)
 
         if len(revision_id_list) > 0 and len(participants_before_add_list) > 0:
             self.update_paricipant_status_for_review(participants_before_add_list, revision_id_list)
@@ -383,7 +368,7 @@ class Integration(object):
                 "revisionId":revision_id}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
-            raise Exception(answer.text)
+            self.log.warning('Failed to add_revision. Exception [%s]' % str(answer.text))
 
     def update_paricipant_status_for_review(self, paricipant_list, revision_id_list):
         file_list = self.get_review_file_extensions(revision_id_list)
@@ -401,10 +386,7 @@ class Integration(object):
                             file_extension_in_reviewer_extension = file_extension
                             break
                     if file_extension_in_reviewer_extension == '':
-                        try:
-                            self.update_participant_status(state, reviewer_token)
-                        except Exception as e:
-                            self.log.warning('Failed to update_participant_status. Exception [%s]' % str(e))
+                        self.update_participant_status(state, reviewer_token)
                     break
 
     def update_participant_status(self, state, reviewer_token):
@@ -414,7 +396,7 @@ class Integration(object):
         headers_participant['Authorization'] = 'Bearer ' + reviewer_token
         answer = requests.post(url, headers=headers_participant, data=json.dumps(data))
         if answer.ok == False:
-            raise Exception(answer.text)
+            self.log.warning('Failed to update_participant_status. Exception [%s]' % str(answer.text))
 
     def add_reviewers(self):
         review_data = self.check_review(self.review_id)
@@ -430,11 +412,7 @@ class Integration(object):
                     user_id = user_data['reviewer_id']
                     user_extension = user_data['reviewer_extension']
                     if extension in user_extension and user_id not in review_participants_list:
-                        try:
-                            self.add_reviewer(user_id)
-                        except Exception as e:
-                            self.log.warning('Failed to add_reviewer. Exception [%s]' % str(e))
-
+                        self.add_reviewer(user_id)
                         break
 
     def get_review_file_extensions(self, revision_id_list=''):
@@ -476,7 +454,7 @@ class Integration(object):
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":self.review_id}, "participant":{"userId":reviewer_id, "role":2}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
-            raise Exception(answer.text)
+            self.log.warning('Failed to add_reviewer. Exception [%s]' % str(answer.text))
 
     def set_labels_for_review(self, label_names_list, issue_uat_date, issue_status):
         review_data = self.check_review(self.review_id)
@@ -512,16 +490,10 @@ class Integration(object):
                 if label_name == 'work in progress':
                     if issue_status == 'In Progress':
                         if label_name not in review_labels_list:
-                            try:
-                                self.add_or_remove_review_label(label_id, label_name, 'add')
-                            except Exception as e:
-                                self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
+                            self.add_or_remove_review_label(label_id, label_name, 'add')
                     else:
                         if label_name in review_labels_list:
-                            try:
-                                self.add_or_remove_review_label(label_id, label_name, 'remove')
-                            except Exception as e:
-                                self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
+                            self.add_or_remove_review_label(label_id, label_name, 'remove')
                     continue
                 for reviewer in reviewer_participants_list:
                     user_state = reviewer['user_state']
@@ -529,26 +501,14 @@ class Integration(object):
                     if re.search(reviewer_label, label_name) is not None:
                         if user_state == Integration.PARTICIPANT_STATE_REJECTED:
                             if label_name not in review_labels_list and '!' in label_name:
-                                try:
-                                    self.add_or_remove_review_label(label_id, label_name, 'add')
-                                except Exception as e:
-                                    self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
+                                self.add_or_remove_review_label(label_id, label_name, 'add')
                             if label_name in review_labels_list and '!' not in label_name:
-                                try:
-                                    self.add_or_remove_review_label(label_id, label_name, 'remove')
-                                except Exception as e:
-                                    self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
+                                self.add_or_remove_review_label(label_id, label_name, 'remove')
                         else:
                             if label_name in review_labels_list and '!' in label_name:
-                                try:
-                                    self.add_or_remove_review_label(label_id, label_name, 'remove')
-                                except Exception as e:
-                                    self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
+                                self.add_or_remove_review_label(label_id, label_name, 'remove')
                             if label_name not in review_labels_list and '!' not in label_name:
-                                try:
-                                    self.add_or_remove_review_label(label_id, label_name, 'add')
-                                except Exception as e:
-                                    self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
+                                self.add_or_remove_review_label(label_id, label_name, 'add')
                         break
     
     # Checks release date and adds or removes label
@@ -559,16 +519,10 @@ class Integration(object):
         next_two_week = str((datetime.now() + timedelta(days=13)).strftime('%m/%d/%Y'))
 
         if current_release >= sysdate and current_release <= next_two_week and label_name not in review_labels_list:
-            try:
-                self.add_or_remove_review_label(label_id, label_name, 'add')
-            except Exception as e:
-                self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
+            self.add_or_remove_review_label(label_id, label_name, 'add')
 
         elif current_release < sysdate or current_release > next_two_week and label_name in review_labels_list:
-            try:
-                self.add_or_remove_review_label(label_id, label_name, 'remove')
-            except Exception as e:
-                self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
+            self.add_or_remove_review_label(label_id, label_name, 'remove')
 
     # Removes labels from closed reviews and stop branch tracking
     def check_closed_reviews(self):
@@ -586,10 +540,7 @@ class Integration(object):
         if 'labels' in review_data:
             review_labels = review_data['labels']
             for label in review_labels:
-                try:
-                    self.add_or_remove_review_label(label['id'], label['name'], 'remove')
-                except Exception as e:
-                    self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(e))
+                self.add_or_remove_review_label(label['id'], label['name'], 'remove')
 
     def get_labels_list(self, status=''):
         label_names_list = []
@@ -621,16 +572,9 @@ class Integration(object):
             ready_for_review_label = review_scope['label']
             raised_concern_label = '!' + review_scope['label']
             if ready_for_review_label not in label_names_list:
-                try:
-                    self.create_or_edit_review_label(ready_for_review_label, str(LabelColor.GREEN.value))
-                except Exception as e:
-                    self.log.warning('Failed to create_or_edit_review_label. Exception [%s]' % str(e))
-
+                self.create_or_edit_review_label(ready_for_review_label, str(LabelColor.GREEN.value))
             if raised_concern_label not in label_names_list:
-                try:
-                    self.create_or_edit_review_label(raised_concern_label, str(LabelColor.RED.value))
-                except Exception as e:
-                    self.log.warning('Failed to create_or_edit_review_label. Exception [%s]' % str(e))
+                self.create_or_edit_review_label(raised_concern_label, str(LabelColor.RED.value))
 
     def check_review_labels(self):
         try:
@@ -656,7 +600,7 @@ class Integration(object):
                 'label': {'id': label_name, 'name': label_name, 'colorId': label_color}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
-            raise Exception(answer.text)
+            self.log.warning('Failed to create_or_edit_review_label. Exception [%s]' % str(answer.text))
 
     def url_setting(self, url):
         url_re = re.search('upsource', url)
