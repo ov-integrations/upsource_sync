@@ -1,4 +1,7 @@
-from UpsourceIntegration import Integration
+from Integration import Integration
+from Issue import Issue
+from Review import Review
+
 import json
 
 with open('settings.json', "rb") as PFile:
@@ -17,6 +20,8 @@ pass_onevizion = password_data["passOneVizion"]
 product_onevizion = password_data["productOneVizion"]
 trackor_type = password_data["trackorType"]
 
-upsource_integration = Integration(url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes,
-                                   url_onevizion, login_onevizion, pass_onevizion, product_onevizion, trackor_type)
-upsource_integration.start_integration()
+issue = Issue(url_onevizion, login_onevizion, pass_onevizion, product_onevizion, trackor_type)
+review = Review(url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes)
+integration = Integration(issue, review)
+
+integration.start_integration()
