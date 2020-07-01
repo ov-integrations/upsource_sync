@@ -1,5 +1,5 @@
-from UrlSetting import UrlSetting
-from IntegrationLog import IntegrationLog
+from configure_url import configure_url
+from integration_log import log_builder
 from requests.auth import HTTPBasicAuth
 import requests
 import json
@@ -7,15 +7,15 @@ import json
 
 class Review:
     def __init__(self, url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes):        
-        self.url_upsource = UrlSetting().url_setting(url_upsource)
+        self.url_upsource = configure_url(url_upsource)
         self.user_name_upsource = user_name_upsource
         self.project_upsource = project_upsource
         self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
         self.review_scopes = review_scopes
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
-        self.log = IntegrationLog().get_logger()
+        self.log = log_builder()
 
-    def filtered_revision_list(self, issue_title):
+    def get_filtered_revision_list(self, issue_title):
         url = self.url_upsource + '~rpc/getRevisionsListFiltered'
         data = {"projectId":self.project_upsource, "limit":100, "query":issue_title}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
@@ -25,7 +25,7 @@ class Review:
             self.log.warning('Failed to filtered_revision_list. Exception [%s]' % str(answer.text))
             return None
 
-    def close_or_reopen_review(self, status, review_id):
+    def close_or_reopen(self, status, review_id):
         url = self.url_upsource + '~rpc/closeReview'
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, "isFlagged":status}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
@@ -59,7 +59,7 @@ class Review:
         else:
             raise Exception(answer.text)
 
-    def get_revision_in_review(self, revision_id):
+    def get_revision(self, revision_id):
         url = self.url_upsource + '~rpc/getRevisionReviewInfo'
         data = {"projectId": self.project_upsource, "revisionId": revision_id}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
@@ -85,7 +85,7 @@ class Review:
         if answer.ok == False:
             self.log.warning('Failed to update_participant_status. Exception [%s]' % str(answer.text))
 
-    def get_review_summary_changes(self, review_id, revision_id_list):
+    def get_summary_changes(self, review_id, revision_id_list):
         url = self.url_upsource + '~rpc/getReviewSummaryChanges'
         if revision_id_list == '':
             data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, 
@@ -110,7 +110,7 @@ class Review:
         if answer.ok == False:
             self.log.warning('Failed to add_reviewer. Exception [%s]' % str(answer.text))
 
-    def get_reviews(self, query):
+    def get_list_on_query(self, query):
         url = self.url_upsource + '~rpc/getReviews'
         data = {"projectId":self.project_upsource, "limit":100, "query":query}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
@@ -131,14 +131,14 @@ class Review:
         if answer.ok == False:
             self.log.warning('Failed to delete_default_reviewer. Exception [%s]' % str(answer.text))
 
-    def rename_review(self, review_id, issue_title, issue_summary):
+    def rename(self, review_id, issue_title, issue_summary):
         url = self.url_upsource + '~rpc/renameReview'
         data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, "text":str(issue_title) + ' ' + str(issue_summary)}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to rename_review. Exception [%s]' % str(answer.text))
 
-    def create_review(self, revision_id):
+    def create(self, revision_id):
         url = self.url_upsource + '~rpc/createReview'
         data = {"projectId":self.project_upsource, "revisions":revision_id}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
@@ -148,14 +148,14 @@ class Review:
             self.log.warning('Failed to create_review. Exception [%s]' % str(answer.text))
             return None
 
-    def create_or_edit_review_label(self, label_name, label_color):
+    def create_or_edit_label(self, label_name, label_color):
         url = self.url_upsource + '~rpc/createOrEditReviewLabel'
         data = {'projectId': self.project_upsource, 'label': {'id': label_name, 'name': label_name, 'colorId': label_color}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to create_or_edit_review_label. Exception [%s]' % str(answer.text))
 
-    def get_review_labels(self):
+    def get_label(self):
         url = self.url_upsource + '~rpc/getReviewLabels'
         data = {"projectId":self.project_upsource}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
@@ -165,7 +165,7 @@ class Review:
             self.log.warning('Failed to get_review_labels. Exception [%s]' % str(answer.text))
             return None
 
-    def add_or_remove_review_label(self, review_id, label_id, label_name, action):
+    def add_or_remove_label(self, review_id, label_id, label_name, action):
         if action == 'add':
             url = self.url_upsource + '~rpc/addReviewLabel'
         if action == 'remove':

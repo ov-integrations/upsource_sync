@@ -1,6 +1,6 @@
-from Integration import Integration
-from Issue import Issue
-from Review import Review
+from integration import Integration
+from issue import Issue
+from review import Review
 
 import json
 
