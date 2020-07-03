@@ -607,7 +607,8 @@ class ParticipantRole(Enum):
 
 
 class UrlUtils:
-    def configure_url(self, url):
+    @staticmethod
+    def configure_url(url):
         url_re = re.search('upsource', url)
         url_re_start = re.search('^https', url)
         url_re_finish = re.search('/$', url)
