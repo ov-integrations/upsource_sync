@@ -1,7 +1,4 @@
-from integration import Integration
-from issue import Issue
-from review import Review
-
+from upsource_integration import Integration, Issue, Review
 import json
 
 with open('settings.json', "rb") as PFile:
