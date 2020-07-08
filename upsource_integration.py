@@ -1,4 +1,3 @@
-from integration_log import build_logger
 from datetime import datetime, timedelta
 from requests.auth import HTTPBasicAuth
 from enum import Enum
@@ -9,10 +8,10 @@ import json
 
 
 class Integration:
-    def __init__(self, issue, review):
+    def __init__(self, issue, review, logger):
         self.issue = issue
         self.review = review
-        self.log = build_logger()
+        self.log = logger
         self.upsource_users = self.get_upsource_users()
 
     def start_integration(self):
@@ -373,9 +372,8 @@ class Integration:
 
 class Issue:
     def __init__(self, url_onevizion, login_onevizion, pass_onevizion, product_onevizion, trackor_type):
-        self.url_onevizion = UrlUtils().configure_url(url_onevizion)
         self.product_onevizion = product_onevizion
-        self.issue_list_request = onevizion.Trackor(trackorType=trackor_type, URL=self.url_onevizion, userName=login_onevizion, password=pass_onevizion)
+        self.issue_list_request = onevizion.Trackor(trackorType=trackor_type, URL=url_onevizion, userName=login_onevizion, password=pass_onevizion)
 
     def get_list_for_review(self):
         self.issue_list_request.read(
@@ -407,14 +405,14 @@ class Issue:
 
 
 class Review:
-    def __init__(self, url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes):        
-        self.url_upsource = UrlUtils().configure_url(url_upsource)
+    def __init__(self, url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes, logger):
+        self.url_upsource = url_upsource
         self.user_name_upsource = user_name_upsource
         self.project_upsource = project_upsource
         self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
         self.review_scopes = review_scopes
         self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
-        self.log = build_logger()
+        self.log = logger
 
     def get_filtered_revision_list(self, issue_title):
         url = self.url_upsource + '~rpc/getRevisionsListFiltered'
