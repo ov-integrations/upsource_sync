@@ -132,7 +132,7 @@ class Integration:
                 revision_id = revision['revisionId']
                 break
 
-        review = self.review.create_review(revision_id)
+        review = self.review.create(revision_id)
         if review is not None:
             created_review = self.review.get_list_on_query(issue_title)
             if isinstance(created_review, list) and len(created_review) > 0 and 'reviewId' in created_review[0]:
