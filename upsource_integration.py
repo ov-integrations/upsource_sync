@@ -127,10 +127,15 @@ class Integration:
         return branch
 
     def create_review_for_issue(self, revision_list, issue_id, issue_title, issue_summary):
+        revision_id = None
         for revision in revision_list:
-            if 'Merge' not in revision['revisionCommitMessage']:
+            if re.search('^Merge', revision['revisionCommitMessage']) is None:
                 revision_id = revision['revisionId']
                 break
+        
+        if revision_id is None:
+            self.log.warning('Failed to received revision_id for Issue ' + str(issue_title) + '. Review not created')
+            return None
 
         review = self.review.create(revision_id)
         if review is not None:
@@ -223,7 +228,7 @@ class Integration:
         if revision_list is not None and 'revision' in revision_list:
             revision_in_revision_list = revision_list['revision']
             for revision in revision_in_revision_list:
-                if 'Merge' not in revision['revisionCommitMessage']:
+                if re.search('^Merge', revision['revisionCommitMessage']) is None:  
                     revision_id = revision['revisionId']
                     try:
                         revision_review_info = self.review.get_revision(revision_id)
