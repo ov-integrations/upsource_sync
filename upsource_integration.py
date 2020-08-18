@@ -170,7 +170,7 @@ class Integration:
                 if len(issue) > 0:
                     issue_status = issue[0]['VQS_IT_STATUS']
                     issue_uat_date = issue[0]['Version.VER_UAT_DATE']
-                    if issue_status in [IssueState.TEST, IssueState.MERGE, IssueState.CLOSED]:
+                    if issue_status in [IssueState.TEST, IssueState.MERGE, IssueState.CLOSED, IssueState.COMPLETED, IssueState.CANCELED]:
                         try:
                             closed_review = self.review.close_or_reopen(True, review_id)
                         except Exception as e:
@@ -582,9 +582,11 @@ class Review:
 
 
 class IssueState:
-    TEST = 'Ready for Test'
+    TEST = 'Test'
     MERGE = 'Ready for Merge'
     CLOSED = 'Closed'
+    COMPLETED = 'Completed'
+    CANCELED = 'Canceled'
     IN_PROGRESS = 'In Progress'
 
 
