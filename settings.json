@@ -4,29 +4,36 @@
     "passOneVizion": "password",
     "productOneVizion": "product name",
     "trackorType": "trackor type",
-    
+
     "urlUpsource": "url",
+    "userNameUpsource": "Full Name",
     "loginUpsource": "login",
     "passUpsource": "password",
     "projectUpsource": "project name",
-    "departments": [
+    "reviewScopes": [
         {
-            "name": "department name1",
-            "filePatternssssssssssssssssss": [
+            "label": "label name1",
+            "filePatterns": [
                 "File Extension1"
             ],
-            "reviewerssssssssssssssss": [
-                "Full Name1"
+            "reviewers": [
+                {
+                    "name": "Full Name1",
+                    "token": "token1"
+                }
             ]
         },
         {
-            "name": "department name2",
+            "label": "label name2",
             "filePatterns": [
                 "File Extension2",
                 "File Extension3"
             ],
-            "reviewerssssssssssssss": [
-                "Full Name2"
+            "reviewers": [
+                {
+                    "name": "Full Name2",
+                    "token": "token2"
+                }
             ]
         }
     ]

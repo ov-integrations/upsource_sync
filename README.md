@@ -9,11 +9,26 @@ Requirements
 - python onevizion library (pip install onevizion)
 
 Features
-- creates new code reviews based for "Ready for Review" issues
-- updates issue status when code review is closed
-- supports git feature branches (branch tracking reviews are created)
-- adds new commits to the reviews in master branch
+- creates new code reviews for "Ready for Review" Issues
+- updates Issue status when code review is closed
+- adds new commits to the reviews (restores statuses if there are no changes related to the review scope)
 - assigns reviewer based on the file type
+- adds and removes review labels:
+  + when creating a review, XXX label depending on the type of code will be added 
+  + when concern raised, !XXX label related to this reviewer will be added, XXX label will be removed
+  + label "work in progress" is added when the Issue status changed back to "In Process"
+  + label "current release" is added, when related Issue targeted for the next release and will be removed, when current release is tested in UAT and released in PROD
+
+Permissions for user Trackor Integration:
+- upsource
+  + Close Upsource Code Review
+  + Edit Upsource Content
+  + Edit Upsource Project
+  + View Upsource Content
+  + View Upsource Project
+
+- onevizion
+  + RE Issue trackor type
 
 To start integration, you need to fill file settings.json, example:
 ```
@@ -25,27 +40,34 @@ To start integration, you need to fill file settings.json, example:
     "trackorType": "Issue",
 
     "urlUpsource": "upsource.onevizion.com",
+    "userNameUpsource": "Trackor Integration",
     "loginUpsource": "login",
     "passUpsource": "********",
     "projectUpsource": "ov",
-    "departments": [
+    "reviewScopes": [
         {
-            "name": "backend",
+            "label": "Java",
             "filePatterns": [
                 "java"
             ],
             "reviewers": [
-                "Full Name1"
+                {
+                    "name": "Full Name1",
+                    "token": "token1"
+                }
             ]
         },
         {
-            "name": "frontend",
+            "label": "Js",
             "filePatterns": [
                 "js",
                 "css"
             ],
             "reviewers": [
-                "Full Name2"
+                {
+                    "name": "Full Name2",
+                    "token": "token2"
+                }
             ]
         }
     ]

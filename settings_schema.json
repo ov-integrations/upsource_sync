@@ -1,0 +1,86 @@
+{
+    "type": "object",
+    "properties": {
+        "urlOneVizion": {
+            "type": "string",
+            "pattern": "^https://.*"
+        },
+        "loginOneVizion": {
+            "type": "string",
+            "minLength": 1
+        },
+        "passOneVizion": {
+            "type": "string",
+            "minLength": 1
+        },
+        "productOneVizion": {
+            "type": "string",
+            "minLength": 1
+        },
+        "trackorType": {
+            "type": "string",
+            "minLength": 1
+        },
+        "urlUpsource": {
+            "type": "string",
+            "pattern": "^https://.*"
+        },
+        "userNameUpsource": {
+            "type": "string",
+            "minLength": 1
+        },
+        "loginUpsource": {
+            "type": "string",
+            "minLength": 1
+        },
+        "passUpsource": {
+            "type": "string",
+            "minLength": 1
+        },
+        "projectUpsource": {
+            "type": "string",
+            "minLength": 1
+        },
+        "reviewScopes": {
+            "type": "array",
+            "items": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "label": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "filePatterns": {
+                            "type": "array",
+                            "items": [
+                                {
+                                    "type": "string",
+                                    "minLength": 1
+                                }
+                            ]
+                        },
+                        "reviewers": {
+                            "type": "array",
+                            "items": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "pattern": "^perm:*"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}
