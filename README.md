@@ -10,7 +10,8 @@ Requirements
 
 Features
 - creates new code reviews for "Ready for Review" Issues
-- updates Issue status when code review is closed
+- creates new Code Review Issue Tasks
+- updates statuses of Code Review Issue Tasks
 - adds new commits to the reviews (restores statuses if there are no changes related to the review scope)
 - assigns reviewer based on the file type
 - adds and removes review labels:
@@ -29,6 +30,7 @@ Permissions for user Trackor Integration:
 
 - onevizion
   + RE Issue trackor type
+  + REA Issue Task trackor type
 
 To start integration, you need to fill file settings.json, example:
 ```
@@ -37,7 +39,8 @@ To start integration, you need to fill file settings.json, example:
     "loginOneVizion": "login",
     "passOneVizion": "********",
     "productOneVizion": "OneVizion",
-    "trackorType": "Issue",
+    "issueTrackorType": "Issue",
+    "issueTaskTrackorType": "Issue_Task",
 
     "urlUpsource": "upsource.onevizion.com",
     "userNameUpsource": "Trackor Integration",
@@ -53,6 +56,7 @@ To start integration, you need to fill file settings.json, example:
             "reviewers": [
                 {
                     "name": "Full Name1",
+                    "ovName" : "ov.name",
                     "token": "token1"
                 }
             ]
@@ -66,10 +70,49 @@ To start integration, you need to fill file settings.json, example:
             "reviewers": [
                 {
                     "name": "Full Name2",
+                    "ovName" : "ov.name",
                     "token": "token2"
                 }
             ]
         }
-    ]
+    ],
+    "issueStatuses": {
+        "test": "Test",
+        "readyForMerge": "Ready for Merge",
+        "closed": "Closed",
+        "completed": "Completed",
+        "canceled": "Canceled",
+        "inProgress": "In Progress",
+        "readyForReview": "Ready for Review"
+    },
+    "issueFields": {
+        "id": "TRACKOR_ID",
+        "title": "TRACKOR_KEY",
+        "status": "VQS_IT_STATUS",
+        "summary": "VQS_IT_XITOR_NAME",
+        "product": "Product.TRACKOR_KEY",
+        "codeReviewUrl": "I_CODE_REVIEW",
+        "uatReleaseDate": "Version.VER_UAT_DATE"
+    },
+    "issueTaskFields": {
+        "id": "TRACKOR_ID",
+        "status": "IT_STATUS",
+        "summary": "IT_DESCRIPTION",
+        "type": "IT_TASK_TYPE",
+        "estHours": "IT_EST_HOURS",
+        "assignedTo": "IT_ASSIGNED_TO",
+        "issue": "Issue.TRACKOR_KEY",
+        "reviewer": "IT_CODE_REVIEWER",
+        "codeReviewUrl": "IT_CODE_REVIEW_URL"
+    },
+    "issueTaskTypes": {
+        "codeReview": "CR",
+        "codeReviewLabel": "Code Review"
+    },
+    "issueTaskStatuses": {
+        "opened": "Opened",
+        "awaitingResponse": "Awaiting Response",
+        "completed": "Completed"
+    }
 }
 ```

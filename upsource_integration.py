@@ -1,15 +1,17 @@
-from datetime import datetime, timedelta
-from requests.auth import HTTPBasicAuth
-from enum import Enum
-import requests
-import re
-import onevizion
 import json
+import re
+from datetime import datetime, timedelta
+from enum import Enum
+
+import onevizion
+import requests
+from requests.auth import HTTPBasicAuth
 
 
 class Integration:
-    def __init__(self, issue, review, logger):
+    def __init__(self, issue, issue_task, review, logger):
         self.issue = issue
+        self.issue_task = issue_task
         self.review = review
         self.log = logger
         self.upsource_users = self.get_upsource_users()
@@ -19,9 +21,9 @@ class Integration:
         self.create_review_label()
 
         for issue in self.issue.get_list_for_review():
-            issue_id = issue['TRACKOR_ID']
-            issue_title = issue['TRACKOR_KEY']
-            issue_summary = issue['VQS_IT_XITOR_NAME']
+            issue_id = issue[self.issue.issue_fields.ID]
+            issue_title = issue[self.issue.issue_fields.TITLE]
+            issue_summary = issue[self.issue.issue_fields.SUMMARY]
 
             revision_list = self.review.get_filtered_revision_list(issue_title)
             if revision_list is not None and 'revision' in revision_list:
@@ -103,12 +105,8 @@ class Integration:
                     for label in review[0]['labels']:
                         self.review.add_or_remove_label(review_id, label['id'], label['name'], 'remove')
 
-                if branch == 'master':
-                    self.issue.update_status(issue_id, IssueState.TEST)
-                    self.log.info('Issue ' + str(issue_title) + ' updated status to ' + IssueState.TEST)
-                else:
-                    self.issue.update_status(issue_id, IssueState.MERGE)
-                    self.log.info('Issue ' + str(issue_title) + ' updated status to ' + IssueState.MERGE)
+                self.close_issue_tasks(issue_title)
+                self.log.info('All Code Review Issue Tasks of ' + issue_title + ' have been closed')
 
     def set_branch_tracking_for_review(self, issue_title, review_id):
         try:
@@ -132,7 +130,7 @@ class Integration:
             if re.search('^Merge', revision['revisionCommitMessage']) is None:
                 revision_id = revision['revisionId']
                 break
-        
+
         if revision_id is None:
             self.log.warning('Failed to received revision_id for Issue ' + str(issue_title) + '. Review not created')
             return None
@@ -142,7 +140,7 @@ class Integration:
             created_review = self.review.get_list_on_query(issue_title)
             if isinstance(created_review, list) and len(created_review) > 0 and 'reviewId' in created_review[0]:
                 review_id = created_review[0]['reviewId']['reviewId']
-                self.issue.update_code_review_url(issue_id, self.review.url_upsource, self.review.project_upsource, review_id)
+                self.issue.update_code_review_url(issue_id, self.review.get_review_url(review_id))
                 self.review.rename(review_id, issue_title, issue_summary)
 
                 try:
@@ -152,7 +150,8 @@ class Integration:
                     upsource_user = None
 
                 if upsource_user is not None:
-                    self.review.delete_default_reviewer(upsource_user['infos'][0]['userId'], review_id, ParticipantRole.REVIEWER.value)
+                    self.review.delete_default_reviewer(upsource_user['infos'][0]['userId'], review_id,
+                                                        ParticipantRole.REVIEWER.value)
 
                 self.log.info('Review for ' + str(issue_title) + ' created')
 
@@ -168,9 +167,9 @@ class Integration:
                 self.set_branch_tracking_for_review(issue_title, review_id)
                 issue = self.issue.get_list_by_title(issue_title)
                 if len(issue) > 0:
-                    issue_status = issue[0]['VQS_IT_STATUS']
-                    issue_uat_date = issue[0]['Version.VER_UAT_DATE']
-                    if issue_status in [IssueState.TEST, IssueState.MERGE, IssueState.CLOSED, IssueState.COMPLETED, IssueState.CANCELED]:
+                    issue_status = issue[0][self.issue.issue_fields.STATUS]
+                    issue_uat_date = issue[0][self.issue.issue_fields.UAT_RELEASE_DATE]
+                    if issue_status in self.issue.issue_statuses.get_statuses_after_review():
                         try:
                             closed_review = self.review.close_or_reopen(True, review_id)
                         except Exception as e:
@@ -180,12 +179,12 @@ class Integration:
                         if closed_review is not None:
                             self.remove_labels_for_closed_review(review_data, review_id)
                             self.log.debug('Review ' + str(review_id) + ' closed for Issue ' + issue_title)
-                    else:
-                        if review_data['state'] == ReviewState.OPENED.value:
-                            if len(self.upsource_users) > 0:
-                                self.add_revision_to_review(review_data, review_id, issue_title)
-                                self.add_reviewers(review_id)
-                                self.set_labels_for_review(review_id, label_names_list, issue_uat_date, issue_status)
+
+                    elif review_data['state'] == ReviewState.OPENED.value and len(self.upsource_users) > 0:
+                        self.add_revision_to_review(review_data, review_id, issue_title)
+                        self.add_reviewers_and_create_review_issue_tasks(review_id, issue_title)
+                        self.set_labels_for_review(review_id, label_names_list, issue_uat_date, issue_status)
+                        self.update_issue_tasks_statuses(review_data, issue_title)
 
     def get_upsource_users(self):
         reviewers_list = []
@@ -203,8 +202,10 @@ class Integration:
 
                 if upsource_user is not None and 'infos' in upsource_user:
                     reviewer_id = upsource_user['infos'][0]['userId']
-                    reviewers_list.append({'reviewer_id': reviewer_id, 'reviewer_name': reviewer, 'reviewer_token':reviewer['token'],
-                                           'reviewer_extension': review_scope_file_patterns, 'reviewer_label':review_scope_label})
+                    reviewers_list.append(
+                        {'reviewer_id': reviewer_id, 'reviewer_name': reviewer, 'reviewer_token': reviewer['token'],
+                         'reviewer_extension': review_scope_file_patterns, 'reviewer_label': review_scope_label,
+                         'reviewer_ov_name': reviewer['ovName']})
 
         return reviewers_list
 
@@ -212,9 +213,9 @@ class Integration:
         if 'Review of ' in review_title:
             start = review_title.find('Review of ')
             finish = review_title.find('-')
-            issue_title = review_title[start+10:finish+7]
+            issue_title = review_title[start + 10:finish + 7]
         else:
-            issue_title = review_title[review_title.find('') : review_title.find(' ')]
+            issue_title = review_title[review_title.find(''): review_title.find(' ')]
 
         return issue_title
 
@@ -228,7 +229,7 @@ class Integration:
         if revision_list is not None and 'revision' in revision_list:
             revision_in_revision_list = revision_list['revision']
             for revision in revision_in_revision_list:
-                if re.search('^Merge', revision['revisionCommitMessage']) is None:  
+                if re.search('^Merge', revision['revisionCommitMessage']) is None:
                     revision_id = revision['revisionId']
                     try:
                         revision_review_info = self.review.get_revision(revision_id)
@@ -245,6 +246,7 @@ class Integration:
 
     def update_paricipant_status_for_review(self, paricipant_list, revision_id_list, review_id):
         file_list = self.get_review_file_extensions(review_id, revision_id_list)
+
         for participant in paricipant_list:
             state = participant['state']
             user_id = participant['userId']
@@ -252,7 +254,8 @@ class Integration:
                 reviewer_id = user_data['reviewer_id']
                 reviewer_token = user_data['reviewer_token']
                 reviewer_extension = user_data['reviewer_extension']
-                if user_id == reviewer_id and state in (ParticipantState.ACCEPTED.value, ParticipantState.REJECTED.value):
+                if user_id == reviewer_id and state in (
+                        ParticipantState.ACCEPTED.value, ParticipantState.REJECTED.value):
                     file_extension_in_reviewer_extension = ''
                     for file_extension in file_list:
                         if file_extension in reviewer_extension:
@@ -262,19 +265,60 @@ class Integration:
                         self.review.update_participant_status(state, reviewer_token, review_id)
                     break
 
+    def update_issue_tasks_statuses(self, review_data, issue_title):
+        if 'participants' in review_data:
+            participants = review_data['participants']
+
+            issue_tasks = self.issue_task.find_issue_tasks_to_update(issue_title)
+
+            for participant in participants:
+                state = participant['state']
+                user_id = participant['userId']
+                for user_data in self.upsource_users:
+                    reviewer_id = user_data['reviewer_id']
+                    reviewer_ov_name = user_data['reviewer_name']['ovName']
+                    if user_id == reviewer_id:
+                        reviewers_issue_tasks = list(
+                            filter(lambda it: reviewer_ov_name in it[self.issue_task.issue_task_fields.REVIEWER],
+                                   issue_tasks))
+                        if reviewers_issue_tasks is not None and len(reviewers_issue_tasks) > 0:
+                            for issue_task in reviewers_issue_tasks:
+                                if state == ParticipantState.ACCEPTED.value:
+                                    self.issue_task.close_issue_task(
+                                        issue_task[self.issue_task.issue_task_fields.ID])
+                                    self.log.info(
+                                        'Code Review Issue Task of ' + issue_title + ' has been closed for ' + reviewer_ov_name)
+                                elif state == ParticipantState.REJECTED.value:
+                                    self.issue_task.update_issue_task_status(
+                                        issue_task[self.issue_task.issue_task_fields.ID],
+                                        self.issue_task.issue_task_statuses.AWAITING_RESPONSE)
+                                    self.log.info(
+                                        'Code Review Issue Task of ' + issue_title + ' has been changed for ' + reviewer_ov_name)
+                                else:
+                                    self.issue_task.open_issue_task(
+                                        issue_task[self.issue_task.issue_task_fields.ID])
+                                    self.log.info(
+                                        'Code Review Issue Task of ' + issue_title + ' has been opened for ' + reviewer_ov_name)
+
+    def close_issue_tasks(self, issue_title):
+        issue_tasks_to_close = self.issue_task.find_issue_tasks_to_close(issue_title)
+        if len(issue_tasks_to_close) > 0:
+            for issue_task in issue_tasks_to_close:
+                self.issue_task.close_issue_task(issue_task[self.issue_task.issue_task_fields.ID])
+
     def get_review_file_extensions(self, review_id, revision_id_list=''):
         extension_list = []
         changed_files = self.review.get_summary_changes(review_id, revision_id_list)
         for changed_file in changed_files:
             file_icon = changed_file['fileIcon']
-            file_extension = file_icon[file_icon.rfind(':')+1:]
+            file_extension = file_icon[file_icon.rfind(':') + 1:]
 
             if file_extension != '' and file_extension not in extension_list:
                 extension_list.append(file_extension)
 
         return extension_list
 
-    def add_reviewers(self, review_id):
+    def add_reviewers_and_create_review_issue_tasks(self, review_id, issue_title):
         review_data = self.review.get_list_on_query(review_id)
         if isinstance(review_data, list) and len(review_data) > 0 and 'reviewId' in review_data[0]:
             review_participants_list = []
@@ -287,8 +331,13 @@ class Integration:
                 for user_data in self.upsource_users:
                     user_id = user_data['reviewer_id']
                     user_extension = user_data['reviewer_extension']
+                    user_ov_name = user_data['reviewer_ov_name']
                     if extension in user_extension and user_id not in review_participants_list:
                         self.review.add_reviewer(user_id, review_id)
+                        self.issue_task.create_code_review_issue_task(issue_title, user_ov_name,
+                                                                      self.review.get_review_url(review_id))
+                        self.log.info(
+                            'Code Review Issue Task of ' + issue_title + ' has been created for ' + user_ov_name)
                         break
 
     def set_labels_for_review(self, review_id, label_names_list, issue_uat_date, issue_status):
@@ -323,7 +372,7 @@ class Integration:
                     self.set_current_release_label(review_id, issue_uat_date, label_id, label_name, review_labels_list)
                     continue
                 if label_name == 'in progress':
-                    if issue_status == IssueState.IN_PROGRESS:
+                    if issue_status == self.issue.issue_statuses.IN_PROGRESS:
                         if label_name not in review_labels_list:
                             self.review.add_or_remove_label(review_id, label_id, label_name, 'add')
                     else:
@@ -338,7 +387,7 @@ class Integration:
                             if label_name not in review_labels_list and '!' in label_name:
                                 self.review.add_or_remove_label(review_id, label_id, label_name, 'add')
                             if label_name in review_labels_list and '!' not in label_name:
-                                self.review.add_or_remove_label(review_id,label_id, label_name, 'remove')
+                                self.review.add_or_remove_label(review_id, label_id, label_name, 'remove')
                         else:
                             if label_name in review_labels_list and '!' in label_name:
                                 self.review.add_or_remove_label(review_id, label_id, label_name, 'remove')
@@ -376,52 +425,155 @@ class Integration:
 
 
 class Issue:
-    def __init__(self, url_onevizion, login_onevizion, pass_onevizion, product_onevizion, trackor_type):
+    def __init__(self, url_onevizion, login_onevizion, pass_onevizion, product_onevizion, issue_trackor_type,
+                 issue_statuses, issue_fields):
+        self.issue_statuses = IssueStatuses(issue_statuses)
+        self.issue_fields = IssueFields(issue_fields)
         self.product_onevizion = product_onevizion
-        self.issue_list_request = onevizion.Trackor(trackorType=trackor_type, URL=url_onevizion, userName=login_onevizion, password=pass_onevizion)
+        self.issue_service = onevizion.Trackor(trackorType=issue_trackor_type, URL=url_onevizion,
+                                               userName=login_onevizion, password=pass_onevizion)
 
     def get_list_for_review(self):
-        self.issue_list_request.read(
-            filters={'Product.TRACKOR_KEY':self.product_onevizion,'VQS_IT_STATUS':'Ready for Review'},
-            fields=['TRACKOR_KEY', 'VQS_IT_STATUS', 'VQS_IT_XITOR_NAME']
-            )
+        self.issue_service.read(
+            filters={self.issue_fields.PRODUCT: self.product_onevizion,
+                     self.issue_fields.STATUS: self.issue_statuses.READY_FOR_REVIEW},
+            fields=[self.issue_fields.TITLE, self.issue_fields.STATUS, self.issue_fields.SUMMARY]
+        )
 
-        return self.issue_list_request.jsonData
+        return self.issue_service.jsonData
 
     def update_status(self, issue_id, status):
-        self.issue_list_request.update(
+        self.issue_service.update(
             trackorId=issue_id,
-            fields={'VQS_IT_STATUS':status}
-            )
+            fields={self.issue_fields.STATUS: status}
+        )
 
-    def update_code_review_url(self, issue_id, url_upsource, project_upsource, review_id):
-        self.issue_list_request.update(
+    def update_code_review_url(self, issue_id, code_review_url):
+        self.issue_service.update(
             trackorId=issue_id,
-            fields={'I_CODE_REVIEW':url_upsource + project_upsource + '/review/' + review_id}
-            )
+            fields={self.issue_fields.CODE_REVIEW_URL: code_review_url}
+        )
 
     def get_list_by_title(self, issue_title):
-        self.issue_list_request.read(
-            filters={'Product.TRACKOR_KEY':self.product_onevizion,'TRACKOR_KEY':issue_title},
-            fields=['TRACKOR_KEY', 'VQS_IT_STATUS', 'Version.VER_UAT_DATE']
-            )
+        self.issue_service.read(
+            filters={self.issue_fields.PRODUCT: self.product_onevizion, self.issue_fields.TITLE: issue_title},
+            fields=[self.issue_fields.TITLE, self.issue_fields.STATUS, self.issue_fields.UAT_RELEASE_DATE]
+        )
 
-        return self.issue_list_request.jsonData
+        return self.issue_service.jsonData
+
+
+class IssueTask:
+    def __init__(self, url_onevizion, login_onevizion, pass_onevizion, issue_trackor_type,
+                 issue_task_trackor_type, issue_fields, issue_task_fields, issue_task_types, issue_task_statuses):
+        self.issue_fields = IssueFields(issue_fields)
+        self.issue_task_fields = IssueTaskFields(issue_task_fields)
+        self.issue_task_types = IssueTaskTypes(issue_task_types)
+        self.issue_task_statuses = IssueTaskStatuses(issue_task_statuses)
+        self.issue_trackor_type = issue_trackor_type
+        self.issue_task_service = onevizion.Trackor(trackorType=issue_task_trackor_type, URL=url_onevizion,
+                                                    userName=login_onevizion, password=pass_onevizion)
+
+    def create_code_review_issue_task(self, issue_title, reviewer, code_review_url):
+        self.issue_task_service.create(
+            fields={self.issue_task_fields.TYPE: self.issue_task_types.CODE_REVIEW,
+                    self.issue_task_fields.REVIEWER: reviewer,
+                    self.issue_task_fields.CODE_REVIEW_URL: code_review_url},
+            parents={self.issue_trackor_type: {self.issue_fields.TITLE: issue_title}})
+
+    def update_issue_task_status(self, issue_task_id, status):
+        self.issue_task_service.update(
+            trackorId=issue_task_id,
+            fields={self.issue_task_fields.STATUS: status})
+
+    def open_issue_task(self, issue_task_id):
+        self.update_issue_task_status(issue_task_id, self.issue_task_statuses.OPENED)
+
+    def close_issue_task(self, issue_task_id):
+        self.update_issue_task_status(issue_task_id, self.issue_task_statuses.COMPLETED)
+
+    def find_issue_tasks_to_update(self, issue_title):
+        self.issue_task_service.read(
+            filters={self.issue_task_fields.TYPE: self.issue_task_types.CODE_REVIEW_LABEL,
+                     self.issue_task_fields.ISSUE: issue_title},
+            fields=[self.issue_task_fields.REVIEWER])
+
+        return self.issue_task_service.jsonData
+
+    def find_issue_tasks_to_close(self, issue_title):
+        self.issue_task_service.read(
+            filters={self.issue_task_fields.TYPE: self.issue_task_types.CODE_REVIEW_LABEL,
+                     self.issue_task_fields.ISSUE: issue_title},
+            fields=[self.issue_task_fields.REVIEWER])
+
+        return self.issue_task_service.jsonData
+
+
+class IssueStatuses:
+    def __init__(self, issue_statuses):
+        self.TEST = issue_statuses[IssueStatus.TEST.value]
+        self.READY_FOR_MERGE = issue_statuses[IssueStatus.MERGE.value]
+        self.CLOSED = issue_statuses[IssueStatus.CLOSED.value]
+        self.COMPLETED = issue_statuses[IssueStatus.COMPLETED.value]
+        self.CANCELED = issue_statuses[IssueStatus.CANCELED.value]
+        self.IN_PROGRESS = issue_statuses[IssueStatus.IN_PROGRESS.value]
+        self.READY_FOR_REVIEW = issue_statuses[IssueStatus.READY_FOR_REVIEW.value]
+
+    def get_statuses_after_review(self):
+        return [self.TEST, self.READY_FOR_MERGE, self.CLOSED, self.COMPLETED, self.CANCELED]
+
+
+class IssueFields:
+    def __init__(self, issue_fields):
+        self.ID = issue_fields[IssueField.ID.value]
+        self.TITLE = issue_fields[IssueField.TITLE.value]
+        self.STATUS = issue_fields[IssueField.STATUS.value]
+        self.SUMMARY = issue_fields[IssueField.SUMMARY.value]
+        self.PRODUCT = issue_fields[IssueField.PRODUCT.value]
+        self.CODE_REVIEW_URL = issue_fields[IssueField.CODE_REVIEW_URL.value]
+        self.UAT_RELEASE_DATE = issue_fields[IssueField.UAT_RELEASE_DATE.value]
+
+
+class IssueTaskFields:
+    def __init__(self, issue_task_fields):
+        self.ID = issue_task_fields[IssueTaskField.ID.value]
+        self.STATUS = issue_task_fields[IssueTaskField.STATUS.value]
+        self.SUMMARY = issue_task_fields[IssueTaskField.SUMMARY.value]
+        self.TYPE = issue_task_fields[IssueTaskField.TYPE.value]
+        self.EST_HOURS = issue_task_fields[IssueTaskField.EST_HOURS.value]
+        self.ASSIGNED_TO = issue_task_fields[IssueTaskField.ASSIGNED_TO.value]
+        self.ISSUE = issue_task_fields[IssueTaskField.ISSUE.value]
+        self.REVIEWER = issue_task_fields[IssueTaskField.REVIEWER.value]
+        self.CODE_REVIEW_URL = issue_task_fields[IssueTaskField.CODE_REVIEW_URL.value]
+
+
+class IssueTaskTypes:
+    def __init__(self, issue_task_types):
+        self.CODE_REVIEW = issue_task_types[IssueTaskType.CODE_REVIEW.value]
+        self.CODE_REVIEW_LABEL = issue_task_types[IssueTaskType.CODE_REVIEW_LABEL.value]
+
+
+class IssueTaskStatuses:
+    def __init__(self, issue_task_statuses):
+        self.OPENED = issue_task_statuses[IssueTaskStatus.OPENED.value]
+        self.COMPLETED = issue_task_statuses[IssueTaskStatus.COMPLETED.value]
+        self.AWAITING_RESPONSE = issue_task_statuses[IssueTaskStatus.AWAITING_RESPONSE.value]
 
 
 class Review:
-    def __init__(self, url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes, logger):
+    def __init__(self, url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes,
+                 logger):
         self.url_upsource = url_upsource
         self.user_name_upsource = user_name_upsource
         self.project_upsource = project_upsource
         self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
         self.review_scopes = review_scopes
-        self.headers = {'Content-type':'application/json','Content-Encoding':'utf-8'}
+        self.headers = {'Content-type': 'application/json', 'Content-Encoding': 'utf-8'}
         self.log = logger
 
     def get_filtered_revision_list(self, issue_title):
         url = self.url_upsource + '~rpc/getRevisionsListFiltered'
-        data = {"projectId":self.project_upsource, "limit":100, "query":issue_title}
+        data = {"projectId": self.project_upsource, "limit": 100, "query": issue_title}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer.json()['result']
@@ -431,7 +583,7 @@ class Review:
 
     def close_or_reopen(self, status, review_id):
         url = self.url_upsource + '~rpc/closeReview'
-        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, "isFlagged":status}
+        data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id}, "isFlagged": status}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer
@@ -440,14 +592,14 @@ class Review:
 
     def stop_branch_tracking(self, branch, review_id):
         url = self.url_upsource + '~rpc/stopBranchTracking'
-        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, "branch":branch}
+        data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id}, "branch": branch}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
-            self.log.warning('Failed to stop_branch_tracking. Exception [%s]' % str(answer.text)) 
+            self.log.warning('Failed to stop_branch_tracking. Exception [%s]' % str(answer.text))
 
     def get_branch(self, issue_title):
         url = self.url_upsource + '~rpc/getBranches'
-        data = {"projectId":self.project_upsource, "limit":100, "query":issue_title}
+        data = {"projectId": self.project_upsource, "limit": 100, "query": issue_title}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer.json()['result']
@@ -474,8 +626,8 @@ class Review:
 
     def add_revision(self, revision_id, review_id):
         url = self.url_upsource + '~rpc/addRevisionToReview'
-        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id},
-                "revisionId":revision_id}
+        data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
+                "revisionId": revision_id}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to add_revision. Exception [%s]' % str(answer.text))
@@ -483,7 +635,8 @@ class Review:
     def update_participant_status(self, state, reviewer_token, review_id):
         url = self.url_upsource + '~rpc/updateParticipantInReview'
         data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id}, "state": state}
-        headers_participant = {'Content-type': 'application/json', 'Content-Encoding': 'utf-8', 'Authorization': 'Bearer '}
+        headers_participant = {'Content-type': 'application/json', 'Content-Encoding': 'utf-8',
+                               'Authorization': 'Bearer '}
         headers_participant['Authorization'] = 'Bearer ' + reviewer_token
         answer = requests.post(url, headers=headers_participant, data=json.dumps(data))
         if answer.ok == False:
@@ -492,10 +645,10 @@ class Review:
     def get_summary_changes(self, review_id, revision_id_list):
         url = self.url_upsource + '~rpc/getReviewSummaryChanges'
         if revision_id_list == '':
-            data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, 
-                    "revisions":{"selectAll":True}}
+            data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
+                    "revisions": {"selectAll": True}}
         else:
-            data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id}, 
+            data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
                     "revisions": {"revisions": revision_id_list}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
@@ -509,14 +662,15 @@ class Review:
 
     def add_reviewer(self, reviewer_id, review_id):
         url = self.url_upsource + '~rpc/addParticipantToReview'
-        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, "participant":{"userId":reviewer_id, "role":2}}
+        data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
+                "participant": {"userId": reviewer_id, "role": 2}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to add_reviewer. Exception [%s]' % str(answer.text))
 
     def get_list_on_query(self, query):
         url = self.url_upsource + '~rpc/getReviews'
-        data = {"projectId":self.project_upsource, "limit":100, "query":query}
+        data = {"projectId": self.project_upsource, "limit": 100, "query": query}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             if 'reviews' in answer.json()['result']:
@@ -529,22 +683,23 @@ class Review:
 
     def delete_default_reviewer(self, user_id, review_id, role_in_review):
         url = self.url_upsource + '~rpc/removeParticipantFromReview'
-        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, 
-                "participant":{"userId":user_id, "role": role_in_review}}
+        data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
+                "participant": {"userId": user_id, "role": role_in_review}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to delete_default_reviewer. Exception [%s]' % str(answer.text))
 
     def rename(self, review_id, issue_title, issue_summary):
         url = self.url_upsource + '~rpc/renameReview'
-        data = {"reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, "text":str(issue_title) + ' ' + str(issue_summary)}
+        data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
+                "text": str(issue_title) + ' ' + str(issue_summary)}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to rename_review. Exception [%s]' % str(answer.text))
 
     def create(self, revision_id):
         url = self.url_upsource + '~rpc/createReview'
-        data = {"projectId":self.project_upsource, "revisions":revision_id}
+        data = {"projectId": self.project_upsource, "revisions": revision_id}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer
@@ -554,14 +709,15 @@ class Review:
 
     def create_or_edit_label(self, label_name, label_color):
         url = self.url_upsource + '~rpc/createOrEditReviewLabel'
-        data = {'projectId': self.project_upsource, 'label': {'id': label_name, 'name': label_name, 'colorId': label_color}}
+        data = {'projectId': self.project_upsource,
+                'label': {'id': label_name, 'name': label_name, 'colorId': label_color}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to create_or_edit_review_label. Exception [%s]' % str(answer.text))
 
     def get_label(self):
         url = self.url_upsource + '~rpc/getReviewLabels'
-        data = {"projectId":self.project_upsource}
+        data = {"projectId": self.project_upsource}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer.json()['result']
@@ -574,20 +730,58 @@ class Review:
             url = self.url_upsource + '~rpc/addReviewLabel'
         if action == 'remove':
             url = self.url_upsource + '~rpc/removeReviewLabel'
-        data = {"projectId":self.project_upsource, "reviewId":{"projectId":self.project_upsource, "reviewId":review_id}, 
-                "label":{"id":label_id, "name":label_name}}
+        data = {"projectId": self.project_upsource,
+                "reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
+                "label": {"id": label_id, "name": label_name}}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to add_or_remove_review_label. Exception [%s]' % str(answer.text))
 
+    def get_review_url(self, review_id):
+        return self.url_upsource + self.project_upsource + '/review/' + review_id
 
-class IssueState:
-    TEST = 'Test'
-    MERGE = 'Ready for Merge'
-    CLOSED = 'Closed'
-    COMPLETED = 'Completed'
-    CANCELED = 'Canceled'
-    IN_PROGRESS = 'In Progress'
+
+class IssueStatus(Enum):
+    TEST = 'test'
+    MERGE = 'readyForMerge'
+    CLOSED = 'closed'
+    COMPLETED = 'completed'
+    CANCELED = 'canceled'
+    IN_PROGRESS = 'inProgress'
+    READY_FOR_REVIEW = 'readyForReview'
+
+
+class IssueTaskStatus(Enum):
+    OPENED = 'opened'
+    COMPLETED = 'completed'
+    AWAITING_RESPONSE = 'awaitingResponse'
+
+
+class IssueField(Enum):
+    ID = 'id'
+    TITLE = 'title'
+    STATUS = 'status'
+    SUMMARY = 'summary'
+    PRODUCT = 'product'
+    CODE_REVIEW_URL = 'codeReviewUrl'
+    UAT_RELEASE_DATE = 'uatReleaseDate'
+
+
+class IssueTaskField(Enum):
+    ID = 'id'
+    STATUS = 'status'
+    SUMMARY = 'summary'
+    TYPE = 'type'
+    EST_HOURS = 'estHours'
+    ASSIGNED_TO = 'assignedTo'
+    ISSUE = 'issue'
+    REVIEWER = 'reviewer'
+    CODE_REVIEW_URL = 'codeReviewUrl'
+
+
+class IssueTaskType(Enum):
+    CODE_REVIEW = 'codeReview'
+    CODE_REVIEW_LABEL = 'codeReviewLabel'
 
 
 class ReviewState(Enum):
@@ -609,4 +803,3 @@ class ParticipantState(Enum):
 
 class ParticipantRole(Enum):
     REVIEWER = 2
-

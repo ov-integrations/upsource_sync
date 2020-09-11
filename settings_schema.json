@@ -17,7 +17,11 @@
             "type": "string",
             "minLength": 1
         },
-        "trackorType": {
+        "issueTrackorType": {
+            "type": "string",
+            "minLength": 1
+        },
+        "issueTaskTrackorType": {
             "type": "string",
             "minLength": 1
         },
@@ -70,6 +74,10 @@
                                             "type": "string",
                                             "minLength": 1
                                         },
+                                        "ovName": {
+                                            "type": "string",
+                                            "minLength": 1
+                                        },
                                         "token": {
                                             "type": "string",
                                             "pattern": "^perm:*"
@@ -81,6 +89,143 @@
                     }
                 }
             ]
+        },
+        "issueStatuses" : {
+            "type": "object",
+            "properties": {
+                "test": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "readyForMerge": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "closed": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "completed": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "canceled": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "inProgress": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "readyForReview": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
+        "issueFields" : {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "title": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "status": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "summary": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "product": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "codeReviewUrl": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "uatReleaseDate": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
+        "issueTaskFields" : {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "status": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "summary": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "type": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "estHours": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "assignedTo": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "issue": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "reviewer": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "codeReviewUrl": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
+        "issueTaskTypes" : {
+            "type": "object",
+            "properties": {
+                "codeReview": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "codeReviewLabel": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
+        "issueTaskStatuses" : {
+            "type": "object",
+            "properties": {
+                "opened": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "completed": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "awaitingResponse": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
         }
     }
 }
