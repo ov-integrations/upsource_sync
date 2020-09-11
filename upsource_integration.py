@@ -293,7 +293,8 @@ class Integration:
                                         issue_task[self.issue_task.issue_task_fields.ID],
                                         self.issue_task.issue_task_statuses.AWAITING_RESPONSE)
                                     self.log.info(
-                                        'Code Review Issue Task of ' + issue_title + ' has been changed for ' + reviewer_ov_name)
+                                        'Code Review Issue Task of ' + issue_title +
+                                        ' has been changed to "Awaiting for Response" for ' + reviewer_ov_name)
                                 else:
                                     self.issue_task.open_issue_task(
                                         issue_task[self.issue_task.issue_task_fields.ID])

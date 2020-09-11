@@ -19,9 +19,9 @@
             ],
             "reviewers": [
                 {
-                    "name": "Full Name1",
+                    "name": "Upsource Full Name1",
                     "ovName" : "OV Name1",
-                    "token": "token1"
+                    "token": "Upsource token1"
                 }
             ]
         },
@@ -33,9 +33,9 @@
             ],
             "reviewers": [
                 {
-                    "name": "Full Name2",
+                    "name": "Upsource Full Name2",
                     "ovName" : "OV Name2",
-                    "token": "token2"
+                    "token": "Upsource token2"
                 }
             ]
         }
