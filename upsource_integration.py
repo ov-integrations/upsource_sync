@@ -30,7 +30,7 @@ class Integration:
                 review = self.review.get_list_on_query(issue_title)
                 if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
                     if review[0]['state'] == ReviewState.CLOSED.value:
-                        self.change_issue_status(review, issue_id, issue_title)
+                        self.change_issue_status(review, issue_title)
                 else:
                     self.create_review_for_issue(revision_list['revision'], issue_id, issue_title, issue_summary)
 
@@ -79,7 +79,7 @@ class Integration:
         else:
             return label_names_list
 
-    def change_issue_status(self, review, issue_id, issue_title):
+    def change_issue_status(self, review, issue_title):
         review_updated_at = str(review[0]['updatedAt'])[:-3]
         update_date = str(datetime.fromtimestamp(int(review_updated_at)).strftime('%m/%d/%Y %H:%M'))
         review_id = review[0]['reviewId']['reviewId']
