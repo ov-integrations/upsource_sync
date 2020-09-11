@@ -3,7 +3,8 @@
     "loginOneVizion": "login",
     "passOneVizion": "password",
     "productOneVizion": "product name",
-    "trackorType": "trackor type",
+    "issueTrackorType": "Issue trackor type",
+    "issueTaskTrackorType": "Issue Task trackor type",
 
     "urlUpsource": "url",
     "userNameUpsource": "Full Name",
@@ -19,6 +20,7 @@
             "reviewers": [
                 {
                     "name": "Full Name1",
+                    "ovName" : "OV Name1",
                     "token": "token1"
                 }
             ]
@@ -32,9 +34,48 @@
             "reviewers": [
                 {
                     "name": "Full Name2",
+                    "ovName" : "OV Name2",
                     "token": "token2"
                 }
             ]
         }
-    ]
+    ],
+    "issueStatuses": {
+        "test": "Test",
+        "readyForMerge": "Ready for Merge",
+        "closed": "Closed",
+        "completed": "Completed",
+        "canceled": "Canceled",
+        "inProgress": "In Progress",
+        "readyForReview": "Ready for Review"
+    },
+    "issueFields": {
+        "id": "TRACKOR_ID",
+        "title": "TRACKOR_KEY",
+        "status": "VQS_IT_STATUS",
+        "summary": "VQS_IT_XITOR_NAME",
+        "product": "Product.TRACKOR_KEY",
+        "codeReviewUrl": "I_CODE_REVIEW",
+        "uatReleaseDate": "Version.VER_UAT_DATE"
+    },
+    "issueTaskFields": {
+        "id": "TRACKOR_ID",
+        "status": "IT_STATUS",
+        "summary": "IT_DESCRIPTION",
+        "type": "IT_TASK_TYPE",
+        "estHours": "IT_EST_HOURS",
+        "assignedTo": "IT_ASSIGNED_TO",
+        "issue": "Issue.TRACKOR_KEY",
+        "reviewer": "IT_CODE_REVIEWER",
+        "codeReviewUrl": "IT_CODE_REVIEW_URL"
+    },
+    "issueTaskTypes": {
+        "codeReview": "CR",
+        "codeReviewLabel": "Code Review"
+    },
+    "issueTaskStatuses": {
+        "opened": "Opened",
+        "awaitingResponse": "Awaiting Response",
+        "completed": "Completed"
+    }
 }
