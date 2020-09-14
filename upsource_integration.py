@@ -279,7 +279,8 @@ class Integration:
                     reviewer_ov_name = user_data['reviewer_name']['ovName']
                     if user_id == reviewer_id:
                         reviewers_issue_tasks = list(
-                            filter(lambda it: reviewer_ov_name in it[self.issue_task.issue_task_fields.REVIEWER],
+                            filter(lambda it: it[self.issue_task.issue_task_fields.REVIEWER] is not None and
+                                              reviewer_ov_name in it[self.issue_task.issue_task_fields.REVIEWER],
                                    issue_tasks))
                         if reviewers_issue_tasks is not None and len(reviewers_issue_tasks) > 0:
                             for issue_task in reviewers_issue_tasks:
