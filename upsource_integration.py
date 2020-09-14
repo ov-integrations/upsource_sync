@@ -284,19 +284,24 @@ class Integration:
                                    issue_tasks))
                         if reviewers_issue_tasks is not None and len(reviewers_issue_tasks) > 0:
                             for issue_task in reviewers_issue_tasks:
-                                if state == ParticipantState.ACCEPTED.value:
+                                if state == ParticipantState.ACCEPTED.value and \
+                                        issue_task[self.issue_task.issue_task_fields.STATUS] != self.issue_task.issue_task_statuses.COMPLETED:
                                     self.issue_task.close_issue_task(
                                         issue_task[self.issue_task.issue_task_fields.ID])
                                     self.log.info(
                                         'Code Review Issue Task of ' + issue_title + ' has been closed for ' + reviewer_ov_name)
-                                elif state == ParticipantState.REJECTED.value:
+
+                                elif state == ParticipantState.REJECTED.value and \
+                                        issue_task[self.issue_task.issue_task_fields.STATUS] != self.issue_task.issue_task_statuses.AWAITING_RESPONSE:
                                     self.issue_task.update_issue_task_status(
                                         issue_task[self.issue_task.issue_task_fields.ID],
                                         self.issue_task.issue_task_statuses.AWAITING_RESPONSE)
                                     self.log.info(
                                         'Code Review Issue Task of ' + issue_title +
                                         ' has been changed to "Awaiting for Response" for ' + reviewer_ov_name)
-                                else:
+
+                                elif state not in [ParticipantState.ACCEPTED.value, ParticipantState.REJECTED.value] and \
+                                        issue_task[self.issue_task.issue_task_fields.STATUS] != self.issue_task.issue_task_statuses.OPENED:
                                     self.issue_task.open_issue_task(
                                         issue_task[self.issue_task.issue_task_fields.ID])
                                     self.log.info(
@@ -498,7 +503,7 @@ class IssueTask:
         self.issue_task_service.read(
             filters={self.issue_task_fields.TYPE: self.issue_task_types.CODE_REVIEW_LABEL,
                      self.issue_task_fields.ISSUE: issue_title},
-            fields=[self.issue_task_fields.REVIEWER])
+            fields=[self.issue_task_fields.REVIEWER, self.issue_task_fields.STATUS])
 
         return self.issue_task_service.jsonData
 
