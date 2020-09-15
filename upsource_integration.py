@@ -80,33 +80,18 @@ class Integration:
             return label_names_list
 
     def change_issue_status(self, review, issue_title):
-        review_updated_at = str(review[0]['updatedAt'])[:-3]
-        update_date = str(datetime.fromtimestamp(int(review_updated_at)).strftime('%m/%d/%Y %H:%M'))
         review_id = review[0]['reviewId']['reviewId']
 
         branch = self.set_branch_tracking_for_review(issue_title, review_id)
         branch_re = ''.join(branch)
         exclude_versions = re.search(r'^\d\d\.(\d\d$|\d$)', branch_re)
         if exclude_versions is None:
-            current_day = str((datetime.now()).strftime('%m/%d/%Y %H:%M'))
-            current_day_datetime = datetime.strptime(current_day, '%m/%d/%Y %H:%M')
-            previous_time = str((current_day_datetime - timedelta(minutes=15)).strftime('%m/%d/%Y %H:%M'))
-            if previous_time >= update_date:
-                try:
-                    reopened_review = self.review.close_or_reopen(False, review_id)
-                except Exception as e:
-                    self.log.warning('Failed to close_or_reopen. Exception [%s]' % str(e))
-                    reopened_review = None
+            if 'labels' in review:
+                for label in review[0]['labels']:
+                    self.review.add_or_remove_label(review_id, label['id'], label['name'], 'remove')
 
-                if reopened_review is not None:
-                    self.log.debug('Review ' + str(review_id) + ' reopened for Issue ' + issue_title)
-            else:
-                if 'labels' in review:
-                    for label in review[0]['labels']:
-                        self.review.add_or_remove_label(review_id, label['id'], label['name'], 'remove')
-
-                self.close_issue_tasks(issue_title)
-                self.log.info('All Code Review Issue Tasks of ' + issue_title + ' have been closed')
+            self.close_issue_tasks(issue_title)
+            self.log.info('All Code Review Issue Tasks of ' + issue_title + ' have been closed')
 
     def set_branch_tracking_for_review(self, issue_title, review_id):
         try:
