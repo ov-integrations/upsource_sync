@@ -328,6 +328,7 @@ class Integration:
                         self.review.add_reviewer(user_id, review_id)
                         self.issue_task.create_code_review_issue_task(issue_title, user_ov_name,
                                                                       self.review.get_review_url(review_id))
+                        review_participants_list.append(user_id)
                         self.log.info(
                             'Code Review Issue Task of ' + issue_title + ' has been created for ' + user_ov_name)
                         break
