@@ -33,7 +33,7 @@ class Integration:
                 if revision_list is not None and 'revision' in revision_list:
                     revision_in_revision_list = revision_list['revision']
                     if len(revision_in_revision_list) == self.review.LIMIT:
-                        skip_revision_data = self.review.LIMIT
+                        skip_revision_data += self.review.LIMIT
                         has_more_revisions = True
                     else:
                         has_more_revisions = False
@@ -228,7 +228,7 @@ class Integration:
             if revision_list is not None and 'revision' in revision_list:
                 revision_in_revision_list = revision_list['revision']
                 if len(revision_in_revision_list) == self.review.LIMIT:
-                    skip_revision_data = self.review.LIMIT
+                    skip_revision_data += self.review.LIMIT
                     has_more_revisions = True
                 else:
                     has_more_revisions = False
