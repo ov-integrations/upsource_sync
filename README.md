@@ -14,6 +14,7 @@ Features
 - updates statuses of Code Review Issue Tasks
 - adds new commits to the reviews (restores statuses if there are no changes related to the review scope)
 - assigns reviewer based on the file type
+- assigns a default reviewer from the default review scope if no one is assigned to the review
 - adds and removes review labels:
   + when creating a review, XXX label depending on the type of code will be added 
   + when concern raised, !XXX label related to this reviewer will be added, XXX label will be removed

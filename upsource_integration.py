@@ -177,6 +177,7 @@ class Integration:
             review_scope_reviewers = review_scope['reviewers']
             review_scope_file_patterns = review_scope['filePatterns']
             review_scope_label = review_scope['label']
+            is_default = review_scope['isDefault']
 
             for reviewer in review_scope_reviewers:
                 try:
@@ -190,7 +191,7 @@ class Integration:
                     reviewers_list.append(
                         {'reviewer_id': reviewer_id, 'reviewer_name': reviewer, 'reviewer_token': reviewer['token'],
                          'reviewer_extension': review_scope_file_patterns, 'reviewer_label': review_scope_label,
-                         'reviewer_ov_name': reviewer['ovName']})
+                         'reviewer_ov_name': reviewer['ovName'], 'is_default': is_default})
 
         return reviewers_list
 
@@ -311,12 +312,15 @@ class Integration:
         return extension_list
 
     def add_reviewers_and_create_review_issue_tasks(self, review_id, issue_title):
+        reviewers_count = 0
         review_data = self.review.get_list_on_query(review_id)
         if isinstance(review_data, list) and len(review_data) > 0 and 'reviewId' in review_data[0]:
             review_participants_list = []
             if 'participants' in review_data[0]:
                 for review_participant in review_data[0]['participants']:
                     review_participants_list.append(review_participant['userId'])
+                    if ParticipantRole.REVIEWER.value == review_participant['role']:
+                        reviewers_count += 1
 
             extension_list = self.get_review_file_extensions(review_id)
             for extension in extension_list:
@@ -325,13 +329,24 @@ class Integration:
                     user_extension = user_data['reviewer_extension']
                     user_ov_name = user_data['reviewer_ov_name']
                     if extension in user_extension and user_id not in review_participants_list:
-                        self.review.add_reviewer(user_id, review_id)
-                        self.issue_task.create_code_review_issue_task(issue_title, user_ov_name,
-                                                                      self.review.get_review_url(review_id))
+                        self.add_reviewer_and_create_issue_task(user_id, review_id, issue_title, user_ov_name)
                         review_participants_list.append(user_id)
-                        self.log.info(
-                            'Code Review Issue Task of ' + issue_title + ' has been created for ' + user_ov_name)
+                        reviewers_count += 1
                         break
+
+            if reviewers_count == 0:
+                for user_data in self.upsource_users:
+                    user_id = user_data['reviewer_id']
+                    user_ov_name = user_data['reviewer_ov_name']
+                    is_default = user_data['is_default']
+                    if is_default:
+                        self.add_reviewer_and_create_issue_task(user_id, review_id, issue_title, user_ov_name)
+                        break
+
+    def add_reviewer_and_create_issue_task(self, user_id, review_id, issue_title, user_ov_name):
+        self.review.add_reviewer(user_id, review_id)
+        self.issue_task.create_code_review_issue_task(issue_title, user_ov_name, self.review.get_review_url(review_id))
+        self.log.info('Code Review Issue Task of ' + issue_title + ' has been created for ' + user_ov_name)
 
     def set_labels_for_review(self, review_id, label_names_list, issue_uat_date, issue_status):
         review_data = self.review.get_list_on_query(review_id)

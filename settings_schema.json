@@ -64,6 +64,9 @@
                                 }
                             ]
                         },
+                        "isDefault": {
+                            "type": "boolean"
+                        },
                         "reviewers": {
                             "type": "array",
                             "items": [

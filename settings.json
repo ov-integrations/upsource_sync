@@ -14,6 +14,7 @@
     "reviewScopes": [
         {
             "label": "label name1",
+            "isDefault": true,
             "filePatterns": [
                 "File Extension1"
             ],
@@ -27,6 +28,7 @@
         },
         {
             "label": "label name2",
+            "isDefault": false,
             "filePatterns": [
                 "File Extension2",
                 "File Extension3"
