@@ -26,17 +26,17 @@ class Integration:
             issue_summary = issue[self.issue.issue_fields.SUMMARY]
 
             skip_revision_data = 0
-            get_next_revisions = True
-            while get_next_revisions is True:
+            has_more_revisions = True
+            while has_more_revisions:
                 revision_list = self.review.get_filtered_revision_list(issue_title, skip_revision_data)
                 
                 if revision_list is not None and 'revision' in revision_list:
                     revision_in_revision_list = revision_list['revision']
-                    if len(revision_in_revision_list) == UpsourceMethodParameters.LIMIT.value:
-                        skip_revision_data = UpsourceMethodParameters.LIMIT.value
-                        get_next_revisions = True
+                    if len(revision_in_revision_list) == self.review.LIMIT:
+                        skip_revision_data = self.review.LIMIT
+                        has_more_revisions = True
                     else:
-                        get_next_revisions = False
+                        has_more_revisions = False
 
                     review = self.review.get_list_on_query(issue_title)
                     if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
@@ -222,16 +222,16 @@ class Integration:
 
         revision_id_list = []
         skip_revision_data = 0
-        get_next_revisions = True
-        while get_next_revisions is True:
+        has_more_revisions = True
+        while has_more_revisions:
             revision_list = self.review.get_filtered_revision_list(issue_title, skip_revision_data)
             if revision_list is not None and 'revision' in revision_list:
                 revision_in_revision_list = revision_list['revision']
-                if len(revision_in_revision_list) == UpsourceMethodParameters.LIMIT.value:
-                    skip_revision_data = UpsourceMethodParameters.LIMIT.value
-                    get_next_revisions = True
+                if len(revision_in_revision_list) == self.review.LIMIT:
+                    skip_revision_data = self.review.LIMIT
+                    has_more_revisions = True
                 else:
-                    get_next_revisions = False
+                    has_more_revisions = False
 
                 for revision in revision_in_revision_list:
                     if re.search('^Merge', revision['revisionCommitMessage']) is None:
@@ -574,6 +574,8 @@ class IssueTaskStatuses:
 
 
 class Review:
+    LIMIT = 100
+
     def __init__(self, url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes,
                  logger):
         self.url_upsource = url_upsource
@@ -586,7 +588,7 @@ class Review:
 
     def get_filtered_revision_list(self, issue_title, skip_revision_data):
         url = self.url_upsource + '~rpc/getRevisionsListFiltered'
-        data = {"projectId": self.project_upsource, "limit": UpsourceMethodParameters.LIMIT.value, "skip":skip_revision_data, "query": issue_title}
+        data = {"projectId": self.project_upsource, "limit": Review.LIMIT, "skip":skip_revision_data, "query": issue_title}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer.json()['result']
@@ -612,7 +614,7 @@ class Review:
 
     def get_branch(self, issue_title):
         url = self.url_upsource + '~rpc/getBranches'
-        data = {"projectId": self.project_upsource, "limit": UpsourceMethodParameters.LIMIT.value, "query": issue_title}
+        data = {"projectId": self.project_upsource, "limit": Review.LIMIT, "query": issue_title}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer.json()['result']
@@ -621,7 +623,7 @@ class Review:
 
     def find_user_in_upsource(self, reviewer_name):
         url = self.url_upsource + '~rpc/findUsers'
-        data = {'projectId': self.project_upsource, 'pattern': reviewer_name, 'limit': UpsourceMethodParameters.LIMIT.value}
+        data = {'projectId': self.project_upsource, 'pattern': reviewer_name, 'limit': Review.LIMIT}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer.json()['result']
@@ -683,7 +685,7 @@ class Review:
 
     def get_list_on_query(self, query):
         url = self.url_upsource + '~rpc/getReviews'
-        data = {"projectId": self.project_upsource, "limit": UpsourceMethodParameters.LIMIT.value, "query": query}
+        data = {"projectId": self.project_upsource, "limit": Review.LIMIT, "query": query}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             if 'reviews' in answer.json()['result']:
@@ -817,6 +819,3 @@ class ParticipantState(Enum):
 class ParticipantRole(Enum):
     REVIEWER = 2
     
-
-class UpsourceMethodParameters(Enum):
-    LIMIT = 100
