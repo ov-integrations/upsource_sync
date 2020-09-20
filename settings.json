@@ -14,7 +14,6 @@
     "reviewScopes": [
         {
             "label": "label name1",
-            "isDefault": true,
             "filePatterns": [
                 "File Extension1"
             ],
@@ -28,7 +27,6 @@
         },
         {
             "label": "label name2",
-            "isDefault": false,
             "filePatterns": [
                 "File Extension2",
                 "File Extension3"
@@ -42,6 +40,15 @@
             ]
         }
     ],
+    "defaultReviewScope": {
+        "reviewers": [
+            {
+                "name": "Upsource Full Name3",
+                "ovName": "OV Name3",
+                "token": "Upsource token3"
+            }
+        ]
+    },
     "issueStatuses": {
         "test": "Test",
         "readyForMerge": "Ready for Merge",

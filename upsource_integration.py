@@ -14,7 +14,8 @@ class Integration:
         self.issue_task = issue_task
         self.review = review
         self.log = logger
-        self.upsource_users = self.get_upsource_users()
+        self.reviewers = self.get_reviewers()
+        self.default_reviewers = self.get_default_reviewers()
 
     def start_integration(self):
         self.log.info('Starting integration')
@@ -143,7 +144,6 @@ class Integration:
     def check_open_reviews(self):
         review_list = self.review.get_list_on_query('state: open')
         if isinstance(review_list, list) and len(review_list) > 0 and 'reviewId' in review_list[0]:
-            self.upsource_users = self.get_upsource_users()
             label_names_list = self.get_labels_list('open')
 
             for review_data in review_list:
@@ -165,19 +165,18 @@ class Integration:
                             self.remove_labels_for_closed_review(review_data, review_id)
                             self.log.debug('Review ' + str(review_id) + ' closed for Issue ' + issue_title)
 
-                    elif review_data['state'] == ReviewState.OPENED.value and len(self.upsource_users) > 0:
+                    elif review_data['state'] == ReviewState.OPENED.value and len(self.reviewers) > 0:
                         self.add_revision_to_review(review_data, review_id, issue_title)
                         self.add_reviewers_and_create_review_issue_tasks(review_id, issue_title)
                         self.set_labels_for_review(review_id, label_names_list, issue_uat_date, issue_status)
                         self.update_issue_tasks_statuses(review_data, issue_title)
 
-    def get_upsource_users(self):
+    def get_reviewers(self):
         reviewers_list = []
         for review_scope in self.review.review_scopes:
             review_scope_reviewers = review_scope['reviewers']
             review_scope_file_patterns = review_scope['filePatterns']
             review_scope_label = review_scope['label']
-            is_default = review_scope['isDefault']
 
             for reviewer in review_scope_reviewers:
                 try:
@@ -191,7 +190,25 @@ class Integration:
                     reviewers_list.append(
                         {'reviewer_id': reviewer_id, 'reviewer_name': reviewer, 'reviewer_token': reviewer['token'],
                          'reviewer_extension': review_scope_file_patterns, 'reviewer_label': review_scope_label,
-                         'reviewer_ov_name': reviewer['ovName'], 'is_default': is_default})
+                         'reviewer_ov_name': reviewer['ovName']})
+
+        return reviewers_list
+
+    def get_default_reviewers(self):
+        reviewers_list = []
+
+        for reviewer in self.review.default_review_scope['reviewers']:
+            try:
+                upsource_user = self.review.find_user_in_upsource(reviewer['name'])
+            except Exception as e:
+                self.log.warning('Failed to find_user_in_upsource. Exception [%s]' % str(e))
+                upsource_user = None
+
+            if upsource_user is not None and 'infos' in upsource_user:
+                reviewer_id = upsource_user['infos'][0]['userId']
+                reviewers_list.append(
+                    {'reviewer_id': reviewer_id, 'reviewer_name': reviewer, 'reviewer_token': reviewer['token'],
+                     'reviewer_ov_name': reviewer['ovName']})
 
         return reviewers_list
 
@@ -236,7 +253,7 @@ class Integration:
         for participant in paricipant_list:
             state = participant['state']
             user_id = participant['userId']
-            for user_data in self.upsource_users:
+            for user_data in self.reviewers:
                 reviewer_id = user_data['reviewer_id']
                 reviewer_token = user_data['reviewer_token']
                 reviewer_extension = user_data['reviewer_extension']
@@ -260,7 +277,7 @@ class Integration:
             for participant in participants:
                 state = participant['state']
                 user_id = participant['userId']
-                for user_data in self.upsource_users:
+                for user_data in self.reviewers:
                     reviewer_id = user_data['reviewer_id']
                     reviewer_ov_name = user_data['reviewer_name']['ovName']
                     if user_id == reviewer_id:
@@ -324,7 +341,7 @@ class Integration:
 
             extension_list = self.get_review_file_extensions(review_id)
             for extension in extension_list:
-                for user_data in self.upsource_users:
+                for user_data in self.reviewers:
                     user_id = user_data['reviewer_id']
                     user_extension = user_data['reviewer_extension']
                     user_ov_name = user_data['reviewer_ov_name']
@@ -334,14 +351,10 @@ class Integration:
                         reviewers_count += 1
                         break
 
-            if reviewers_count == 0:
-                for user_data in self.upsource_users:
-                    user_id = user_data['reviewer_id']
-                    user_ov_name = user_data['reviewer_ov_name']
-                    is_default = user_data['is_default']
-                    if is_default:
-                        self.add_reviewer_and_create_issue_task(user_id, review_id, issue_title, user_ov_name)
-                        break
+            if reviewers_count == 0 and len(self.default_reviewers) > 0:
+                user_id = self.default_reviewers[0]['reviewer_id']
+                user_ov_name = self.default_reviewers[0]['reviewer_ov_name']
+                self.add_reviewer_and_create_issue_task(user_id, review_id, issue_title, user_ov_name)
 
     def add_reviewer_and_create_issue_task(self, user_id, review_id, issue_title, user_ov_name):
         self.review.add_reviewer(user_id, review_id)
@@ -366,7 +379,7 @@ class Integration:
                 participant_id = participant['userId']
                 participant_role = participant['role']
                 state = participant['state']
-                for user_data in self.upsource_users:
+                for user_data in self.reviewers:
                     reviewer_id = user_data['reviewer_id']
                     reviewer_label = user_data['reviewer_label']
                     if reviewer_id == participant_id and participant_role == ParticipantRole.REVIEWER.value:
@@ -570,12 +583,13 @@ class IssueTaskStatuses:
 
 class Review:
     def __init__(self, url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes,
-                 logger):
+                 default_review_scope, logger):
         self.url_upsource = url_upsource
         self.user_name_upsource = user_name_upsource
         self.project_upsource = project_upsource
         self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
         self.review_scopes = review_scopes
+        self.default_review_scope = default_review_scope
         self.headers = {'Content-type': 'application/json', 'Content-Encoding': 'utf-8'}
         self.log = logger
 
