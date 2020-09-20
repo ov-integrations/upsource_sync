@@ -26,14 +26,25 @@ class Integration:
             issue_title = issue[self.issue.issue_fields.TITLE]
             issue_summary = issue[self.issue.issue_fields.SUMMARY]
 
-            revision_list = self.review.get_filtered_revision_list(issue_title)
-            if revision_list is not None and 'revision' in revision_list:
-                review = self.review.get_list_on_query(issue_title)
-                if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
-                    if review[0]['state'] == ReviewState.CLOSED.value:
-                        self.change_issue_status(review, issue_title)
-                else:
-                    self.create_review_for_issue(revision_list['revision'], issue_id, issue_title, issue_summary)
+            skip_revision_data = 0
+            has_more_revisions = True
+            while has_more_revisions:
+                revision_list = self.review.get_filtered_revision_list(issue_title, skip_revision_data)
+                
+                if revision_list is not None and 'revision' in revision_list:
+                    revision_in_revision_list = revision_list['revision']
+                    if len(revision_in_revision_list) == self.review.LIMIT:
+                        skip_revision_data += self.review.LIMIT
+                        has_more_revisions = True
+                    else:
+                        has_more_revisions = False
+
+                    review = self.review.get_list_on_query(issue_title)
+                    if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
+                        if review[0]['state'] == ReviewState.CLOSED.value:
+                            self.change_issue_status(review, issue_title)
+                    else:
+                        self.create_review_for_issue(revision_in_revision_list, issue_id, issue_title, issue_summary)
 
         self.labels_list = self.review.get_label()
         self.check_open_reviews()
@@ -228,21 +239,30 @@ class Integration:
             participants_before_add_list = review_data['participants']
 
         revision_id_list = []
-        revision_list = self.review.get_filtered_revision_list(issue_title)
-        if revision_list is not None and 'revision' in revision_list:
-            revision_in_revision_list = revision_list['revision']
-            for revision in revision_in_revision_list:
-                if re.search('^Merge', revision['revisionCommitMessage']) is None:
-                    revision_id = revision['revisionId']
-                    try:
-                        revision_review_info = self.review.get_revision(revision_id)
-                    except Exception as e:
-                        self.log.warning('Failed to get_revision_in_review. Exception [%s]' % str(e))
-                        revision_review_info = None
+        skip_revision_data = 0
+        has_more_revisions = True
+        while has_more_revisions:
+            revision_list = self.review.get_filtered_revision_list(issue_title, skip_revision_data)
+            if revision_list is not None and 'revision' in revision_list:
+                revision_in_revision_list = revision_list['revision']
+                if len(revision_in_revision_list) == self.review.LIMIT:
+                    skip_revision_data += self.review.LIMIT
+                    has_more_revisions = True
+                else:
+                    has_more_revisions = False
 
-                    if revision_review_info is not None and len(revision_review_info) == 0:
-                        revision_id_list.append(revision_id)
-                        self.review.add_revision(revision_id, review_id)
+                for revision in revision_in_revision_list:
+                    if re.search('^Merge', revision['revisionCommitMessage']) is None:
+                        revision_id = revision['revisionId']
+                        try:
+                            revision_review_info = self.review.get_revision(revision_id)
+                        except Exception as e:
+                            self.log.warning('Failed to get_revision_in_review. Exception [%s]' % str(e))
+                            revision_review_info = None
+
+                        if revision_review_info is not None and len(revision_review_info) == 0:
+                            revision_id_list.append(revision_id)
+                            self.review.add_revision(revision_id, review_id)
 
         if len(revision_id_list) > 0 and len(participants_before_add_list) > 0:
             self.update_paricipant_status_for_review(participants_before_add_list, revision_id_list, review_id)
@@ -582,6 +602,8 @@ class IssueTaskStatuses:
 
 
 class Review:
+    LIMIT = 100
+
     def __init__(self, url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes,
                  default_review_scope, logger):
         self.url_upsource = url_upsource
@@ -593,9 +615,9 @@ class Review:
         self.headers = {'Content-type': 'application/json', 'Content-Encoding': 'utf-8'}
         self.log = logger
 
-    def get_filtered_revision_list(self, issue_title):
+    def get_filtered_revision_list(self, issue_title, skip_revision_data):
         url = self.url_upsource + '~rpc/getRevisionsListFiltered'
-        data = {"projectId": self.project_upsource, "limit": 100, "query": issue_title}
+        data = {"projectId": self.project_upsource, "limit": Review.LIMIT, "skip":skip_revision_data, "query": issue_title}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer.json()['result']
@@ -621,7 +643,7 @@ class Review:
 
     def get_branch(self, issue_title):
         url = self.url_upsource + '~rpc/getBranches'
-        data = {"projectId": self.project_upsource, "limit": 100, "query": issue_title}
+        data = {"projectId": self.project_upsource, "limit": Review.LIMIT, "query": issue_title}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer.json()['result']
@@ -630,7 +652,7 @@ class Review:
 
     def find_user_in_upsource(self, reviewer_name):
         url = self.url_upsource + '~rpc/findUsers'
-        data = {'projectId': self.project_upsource, 'pattern': reviewer_name, 'limit': 100}
+        data = {'projectId': self.project_upsource, 'pattern': reviewer_name, 'limit': Review.LIMIT}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             return answer.json()['result']
@@ -692,7 +714,7 @@ class Review:
 
     def get_list_on_query(self, query):
         url = self.url_upsource + '~rpc/getReviews'
-        data = {"projectId": self.project_upsource, "limit": 100, "query": query}
+        data = {"projectId": self.project_upsource, "limit": Review.LIMIT, "query": query}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
             if 'reviews' in answer.json()['result']:
@@ -825,3 +847,4 @@ class ParticipantState(Enum):
 
 class ParticipantRole(Enum):
     REVIEWER = 2
+    
