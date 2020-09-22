@@ -29,6 +29,7 @@ class Integration:
             skip_revision_data = 0
             has_more_revisions = True
             while has_more_revisions:
+                has_more_revisions = False
                 revision_list = self.review.get_filtered_revision_list(issue_title, skip_revision_data)
                 
                 if revision_list is not None and 'revision' in revision_list:
@@ -36,8 +37,6 @@ class Integration:
                     if len(revision_in_revision_list) == self.review.LIMIT:
                         skip_revision_data += self.review.LIMIT
                         has_more_revisions = True
-                    else:
-                        has_more_revisions = False
 
                     review = self.review.get_list_on_query(issue_title)
                     if isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]:
@@ -242,14 +241,14 @@ class Integration:
         skip_revision_data = 0
         has_more_revisions = True
         while has_more_revisions:
+            has_more_revisions = False
             revision_list = self.review.get_filtered_revision_list(issue_title, skip_revision_data)
+
             if revision_list is not None and 'revision' in revision_list:
                 revision_in_revision_list = revision_list['revision']
                 if len(revision_in_revision_list) == self.review.LIMIT:
                     skip_revision_data += self.review.LIMIT
                     has_more_revisions = True
-                else:
-                    has_more_revisions = False
 
                 for revision in revision_in_revision_list:
                     if re.search('^Merge', revision['revisionCommitMessage']) is None:
