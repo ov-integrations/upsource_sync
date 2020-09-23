@@ -176,10 +176,12 @@ class Integration:
                             self.log.debug('Review ' + str(review_id) + ' closed for Issue ' + issue_title)
 
                     elif review_data['state'] == ReviewState.OPENED.value and len(self.reviewers) > 0:
+                        issue_tasks = self.issue_task.find_issue_tasks_to_update(issue_title)
+                        self.add_url_to_description(review_data, review_id, issue_tasks)
                         self.add_revision_to_review(review_data, review_id, issue_title)
                         self.add_reviewers_and_create_review_issue_tasks(review_id, issue_title)
                         self.set_labels_for_review(review_id, label_names_list, issue_uat_date, issue_status)
-                        self.update_issue_tasks_statuses(review_data, issue_title)
+                        self.update_issue_tasks_statuses(review_data, issue_tasks, issue_title)
 
     def get_reviewers(self):
         reviewers_list = []
@@ -231,6 +233,28 @@ class Integration:
             issue_title = review_title[review_title.find(''): review_title.find(' ')]
 
         return issue_title
+
+    def add_url_to_description(self, review_data, review_id, issue_tasks):
+        description_in_review = ''
+        if 'description' in review_data:
+            description_in_review = review_data['description']
+
+        text_for_description = ''
+        if len(description_in_review) == 0:
+            for issue_task in issue_tasks:
+                text_for_description = ' [' + issue_task['TRACKOR_KEY'] + '](' + 'https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key=' + issue_task['TRACKOR_KEY'] + ') ' + issue_task['IT_CODE_REVIEWER'] + chr(10) + text_for_description
+        else:            
+            for issue_task in issue_tasks:
+                issue_task_key = issue_task['TRACKOR_KEY']
+                issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
+                if re.search(issue_task_key, description_in_review) is None:
+                    text_for_description = ' [' + issue_task_key + '](' + 'https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key=' + issue_task_key + ') ' + issue_task_code_reviewer + chr(10) + text_for_description
+
+            if len(text_for_description) > 0:
+                text_for_description = text_for_description + description_in_review
+
+        if len(text_for_description) > 0:
+            self.review.edit_review_description(review_id, text_for_description)
 
     def add_revision_to_review(self, review_data, review_id, issue_title):
         participants_before_add_list = []
@@ -287,11 +311,9 @@ class Integration:
                         self.review.update_participant_status(state, reviewer_token, review_id)
                     break
 
-    def update_issue_tasks_statuses(self, review_data, issue_title):
+    def update_issue_tasks_statuses(self, review_data, issue_tasks, issue_title):
         if 'participants' in review_data:
             participants = review_data['participants']
-
-            issue_tasks = self.issue_task.find_issue_tasks_to_update(issue_title)
 
             for participant in participants:
                 state = participant['state']
@@ -536,7 +558,7 @@ class IssueTask:
         self.issue_task_service.read(
             filters={self.issue_task_fields.TYPE: self.issue_task_types.CODE_REVIEW_LABEL,
                      self.issue_task_fields.ISSUE: issue_title},
-            fields=[self.issue_task_fields.REVIEWER, self.issue_task_fields.STATUS])
+            fields=[self.issue_task_fields.REVIEWER, self.issue_task_fields.STATUS, self.issue_task_fields.TITLE])
 
         return self.issue_task_service.jsonData
 
@@ -577,6 +599,7 @@ class IssueFields:
 class IssueTaskFields:
     def __init__(self, issue_task_fields):
         self.ID = issue_task_fields[IssueTaskField.ID.value]
+        self.TITLE = issue_task_fields[IssueTaskField.TITLE.value]
         self.STATUS = issue_task_fields[IssueTaskField.STATUS.value]
         self.SUMMARY = issue_task_fields[IssueTaskField.SUMMARY.value]
         self.TYPE = issue_task_fields[IssueTaskField.TYPE.value]
@@ -783,6 +806,14 @@ class Review:
     def get_review_url(self, review_id):
         return self.url_upsource + self.project_upsource + '/review/' + review_id
 
+    def edit_review_description(self, review_id, text_for_description):
+        url = self.url_upsource + '~rpc/editReviewDescription'
+        data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
+                "text": text_for_description}
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        if answer.ok == False:
+            self.log.warning('Failed to edit_review_description. Exception [%s]' % str(answer.text))
+
 
 class IssueStatus(Enum):
     TEST = 'test'
@@ -812,6 +843,7 @@ class IssueField(Enum):
 
 class IssueTaskField(Enum):
     ID = 'id'
+    TITLE = 'title'
     STATUS = 'status'
     SUMMARY = 'summary'
     TYPE = 'type'

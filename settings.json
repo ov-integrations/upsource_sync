@@ -69,6 +69,7 @@
     },
     "issueTaskFields": {
         "id": "TRACKOR_ID",
+        "title": "TRACKOR_KEY",
         "status": "IT_STATUS",
         "summary": "IT_DESCRIPTION",
         "type": "IT_TASK_TYPE",
