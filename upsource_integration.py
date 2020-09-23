@@ -177,7 +177,7 @@ class Integration:
 
                     elif review_data['state'] == ReviewState.OPENED.value and len(self.reviewers) > 0:
                         issue_tasks = self.issue_task.find_issue_tasks_to_update(issue_title)
-                        self.add_url_to_description(review_data, review_id, issue_tasks)
+                        self.add_task_urls_to_description(review_data, review_id, issue_tasks)
                         self.add_revision_to_review(review_data, review_id, issue_title)
                         self.add_reviewers_and_create_review_issue_tasks(review_id, issue_title)
                         self.set_labels_for_review(review_id, label_names_list, issue_uat_date, issue_status)
@@ -234,27 +234,27 @@ class Integration:
 
         return issue_title
 
-    def add_url_to_description(self, review_data, review_id, issue_tasks):
-        description_in_review = ''
+    def add_task_urls_to_description(self, review_data, review_id, issue_tasks):
+        review_description = ''
         if 'description' in review_data:
-            description_in_review = review_data['description']
+            review_description = review_data['description']
 
-        text_for_description = ''
-        if len(description_in_review) == 0:
+        new_review_description = ''
+        if len(review_description) == 0:
             for issue_task in issue_tasks:
-                text_for_description = ' [' + issue_task['TRACKOR_KEY'] + '](' + 'https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key=' + issue_task['TRACKOR_KEY'] + ') ' + issue_task['IT_CODE_REVIEWER'] + chr(10) + text_for_description
+                new_review_description = '[{}]({}{}) {}{}{}'.format(issue_task['TRACKOR_KEY'], 'https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key=', issue_task['TRACKOR_KEY'], issue_task['IT_CODE_REVIEWER'], chr(10), new_review_description)
         else:            
             for issue_task in issue_tasks:
                 issue_task_key = issue_task['TRACKOR_KEY']
                 issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
-                if re.search(issue_task_key, description_in_review) is None:
-                    text_for_description = ' [' + issue_task_key + '](' + 'https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key=' + issue_task_key + ') ' + issue_task_code_reviewer + chr(10) + text_for_description
+                if re.search(issue_task_key, review_description) is None:
+                    new_review_description = '[{}]({}{}) {}{}{}'.format(issue_task_key, 'https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key=', issue_task_key, issue_task_code_reviewer, chr(10), new_review_description)
 
-            if len(text_for_description) > 0:
-                text_for_description = text_for_description + description_in_review
+            if len(new_review_description) > 0:
+                new_review_description = new_review_description + review_description
 
-        if len(text_for_description) > 0:
-            self.review.edit_review_description(review_id, text_for_description)
+        if len(new_review_description) > 0:
+            self.review.update_review_description(review_id, new_review_description)
 
     def add_revision_to_review(self, review_data, review_id, issue_title):
         participants_before_add_list = []
@@ -806,13 +806,13 @@ class Review:
     def get_review_url(self, review_id):
         return self.url_upsource + self.project_upsource + '/review/' + review_id
 
-    def edit_review_description(self, review_id, text_for_description):
+    def update_review_description(self, review_id, new_review_description):
         url = self.url_upsource + '~rpc/editReviewDescription'
         data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
-                "text": text_for_description}
+                "text": new_review_description}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
-            self.log.warning('Failed to edit_review_description. Exception [%s]' % str(answer.text))
+            self.log.warning('Failed to update_review_description. Exception [%s]' % str(answer.text))
 
 
 class IssueStatus(Enum):
