@@ -242,13 +242,15 @@ class Integration:
         new_review_description = ''
         if len(review_description) == 0:
             for issue_task in issue_tasks:
-                new_review_description = '[{}]({}{}) {}{}{}'.format(issue_task['TRACKOR_KEY'], 'https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key=', issue_task['TRACKOR_KEY'], issue_task['IT_CODE_REVIEWER'], chr(10), new_review_description)
+                issue_task_key = issue_task['TRACKOR_KEY']
+                issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
+                new_review_description = '[{}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={}) {}\n{}'.format(issue_task_key, issue_task_key, issue_task_code_reviewer, new_review_description)
         else:            
             for issue_task in issue_tasks:
                 issue_task_key = issue_task['TRACKOR_KEY']
                 issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
                 if re.search(issue_task_key, review_description) is None:
-                    new_review_description = '[{}]({}{}) {}{}{}'.format(issue_task_key, 'https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key=', issue_task_key, issue_task_code_reviewer, chr(10), new_review_description)
+                    new_review_description = '[{}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={}) {}\n{}'.format(issue_task_key, issue_task_key, issue_task_code_reviewer, new_review_description)
 
             if len(new_review_description) > 0:
                 new_review_description = new_review_description + review_description
@@ -806,10 +808,10 @@ class Review:
     def get_review_url(self, review_id):
         return self.url_upsource + self.project_upsource + '/review/' + review_id
 
-    def update_review_description(self, review_id, new_review_description):
+    def update_review_description(self, review_id, description):
         url = self.url_upsource + '~rpc/editReviewDescription'
         data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
-                "text": new_review_description}
+                "text": description}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to update_review_description. Exception [%s]' % str(answer.text))
