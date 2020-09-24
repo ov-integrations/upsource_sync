@@ -244,13 +244,13 @@ class Integration:
             for issue_task in issue_tasks:
                 issue_task_key = issue_task['TRACKOR_KEY']
                 issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
-                new_review_description = '[{}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={}) {}\n{}'.format(issue_task_key, issue_task_key, issue_task_code_reviewer, new_review_description)
+                new_review_description = '[{0}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description)
         else:            
             for issue_task in issue_tasks:
                 issue_task_key = issue_task['TRACKOR_KEY']
                 issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
                 if re.search(issue_task_key, review_description) is None:
-                    new_review_description = '[{}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={}) {}\n{}'.format(issue_task_key, issue_task_key, issue_task_code_reviewer, new_review_description)
+                    new_review_description = '[{0}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description)
 
             if len(new_review_description) > 0:
                 new_review_description = new_review_description + review_description
