@@ -162,8 +162,13 @@ class Integration:
                 self.set_branch_tracking_for_review(issue_title, review_id)
                 issue = self.issue.get_list_by_title(issue_title)
                 if len(issue) > 0:
+                    issue_id = issue[0][self.issue.issue_fields.ID]
                     issue_status = issue[0][self.issue.issue_fields.STATUS]
                     issue_uat_date = issue[0][self.issue.issue_fields.UAT_RELEASE_DATE]
+                    issue_code_review_url = issue[0][self.issue.issue_fields.CODE_REVIEW_URL]
+                    if issue_code_review_url is None:
+                        self.issue.update_code_review_url(issue_id, self.review.get_review_url(review_id))
+
                     if issue_status in self.issue.issue_statuses.get_statuses_after_review():
                         try:
                             closed_review = self.review.close_or_reopen(True, review_id)
@@ -521,7 +526,7 @@ class Issue:
     def get_list_by_title(self, issue_title):
         self.issue_service.read(
             filters={self.issue_fields.PRODUCT: self.product_onevizion, self.issue_fields.TITLE: issue_title},
-            fields=[self.issue_fields.TITLE, self.issue_fields.STATUS, self.issue_fields.UAT_RELEASE_DATE]
+            fields=[self.issue_fields.TITLE, self.issue_fields.STATUS, self.issue_fields.UAT_RELEASE_DATE, self.issue_fields.CODE_REVIEW_URL]
         )
 
         return self.issue_service.jsonData
