@@ -164,6 +164,7 @@ class Integration:
                 if len(issue) > 0:
                     issue_status = issue[0][self.issue.issue_fields.STATUS]
                     issue_uat_date = issue[0][self.issue.issue_fields.UAT_RELEASE_DATE]
+
                     if issue_status in self.issue.issue_statuses.get_statuses_after_review():
                         try:
                             closed_review = self.review.close_or_reopen(True, review_id)
@@ -176,6 +177,7 @@ class Integration:
                             self.log.debug('Review ' + str(review_id) + ' closed for Issue ' + issue_title)
 
                     elif review_data['state'] == ReviewState.OPENED.value and len(self.reviewers) > 0:
+                        self.update_code_review_url_for_issue(review_id, issue)
                         issue_tasks = self.issue_task.find_issue_tasks_to_update(issue_title)
                         self.add_task_urls_to_description(review_data, review_id, issue_tasks)
                         self.add_revision_to_review(review_data, review_id, issue_title)
@@ -233,6 +235,12 @@ class Integration:
             issue_title = review_title[review_title.find(''): review_title.find(' ')]
 
         return issue_title
+
+    def update_code_review_url_for_issue(self, review_id, issue):
+        issue_id = issue[0][self.issue.issue_fields.ID]
+        issue_code_review_url = issue[0][self.issue.issue_fields.CODE_REVIEW_URL]
+        if issue_code_review_url is None:
+            self.issue.update_code_review_url(issue_id, self.review.get_review_url(review_id))
 
     def add_task_urls_to_description(self, review_data, review_id, issue_tasks):
         review_description = ''
@@ -521,7 +529,7 @@ class Issue:
     def get_list_by_title(self, issue_title):
         self.issue_service.read(
             filters={self.issue_fields.PRODUCT: self.product_onevizion, self.issue_fields.TITLE: issue_title},
-            fields=[self.issue_fields.TITLE, self.issue_fields.STATUS, self.issue_fields.UAT_RELEASE_DATE]
+            fields=[self.issue_fields.TITLE, self.issue_fields.STATUS, self.issue_fields.UAT_RELEASE_DATE, self.issue_fields.CODE_REVIEW_URL]
         )
 
         return self.issue_service.jsonData
