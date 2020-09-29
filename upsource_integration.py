@@ -245,7 +245,32 @@ class Integration:
                 issue_task_key = issue_task['TRACKOR_KEY']
                 issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
                 new_review_description = '[{0}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description)
-        else:            
+        else:
+            update_review_description = False
+            review_description_split = re.split('\n', review_description)
+            for description_line in review_description_split:
+                if re.search(r'^\[\w+-\d+-\d+\]', description_line) is None:
+                    break
+
+                else:
+                    issue_task_delete = True
+                    for issue_task in issue_tasks:
+                        issue_task_key = issue_task['TRACKOR_KEY']
+                        issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
+                        if issue_task_key in description_line:
+
+                            if issue_task_code_reviewer not in description_line:
+                                new_code_reviewer_in_description = '[{0}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={0}) {1}'.format(issue_task_key, issue_task_code_reviewer)
+                                review_description = review_description.replace(description_line, new_code_reviewer_in_description)
+                                update_review_description = True
+
+                            issue_task_delete = False
+                            break
+                    
+                    if issue_task_delete:
+                        review_description = review_description.replace(description_line + '\n', '')
+                        update_review_description = True
+
             for issue_task in issue_tasks:
                 issue_task_key = issue_task['TRACKOR_KEY']
                 issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
@@ -254,6 +279,9 @@ class Integration:
 
             if len(new_review_description) > 0:
                 new_review_description = new_review_description + review_description
+
+            elif len(new_review_description) == 0 and update_review_description:
+                new_review_description = review_description
 
         if len(new_review_description) > 0:
             self.review.update_review_description(review_id, new_review_description)
