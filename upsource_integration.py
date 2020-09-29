@@ -9,6 +9,9 @@ from requests.auth import HTTPBasicAuth
 
 
 class Integration:
+    ISSUE_TASK_ID_PATTERN = r'^\[\w+-\d+-\d+\]' # Example: Notif-163189-16732
+
+
     def __init__(self, issue, issue_task, review, logger):
         self.issue = issue
         self.issue_task = issue_task
@@ -246,14 +249,14 @@ class Integration:
                 issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
                 new_review_description = '[{0}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description)
         else:
-            update_review_description = False
-            review_description_split = re.split('\n', review_description)
-            for description_line in review_description_split:
-                if re.search(r'^\[\w+-\d+-\d+\]', description_line) is None:
+            is_review_description_updated = False
+            split_review_description = re.split('\n', review_description)
+            for description_line in split_review_description:
+                if re.search(self.ISSUE_TASK_ID_PATTERN, description_line) is None:
                     break
 
                 else:
-                    issue_task_delete = True
+                    is_issue_task_deleted = True
                     for issue_task in issue_tasks:
                         issue_task_key = issue_task['TRACKOR_KEY']
                         issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
@@ -262,14 +265,14 @@ class Integration:
                             if issue_task_code_reviewer not in description_line:
                                 new_code_reviewer_in_description = '[{0}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={0}) {1}'.format(issue_task_key, issue_task_code_reviewer)
                                 review_description = review_description.replace(description_line, new_code_reviewer_in_description)
-                                update_review_description = True
+                                is_review_description_updated = True
 
-                            issue_task_delete = False
+                            is_issue_task_deleted = False
                             break
                     
-                    if issue_task_delete:
+                    if is_issue_task_deleted:
                         review_description = review_description.replace(description_line + '\n', '')
-                        update_review_description = True
+                        is_review_description_updated = True
 
             for issue_task in issue_tasks:
                 issue_task_key = issue_task['TRACKOR_KEY']
@@ -280,7 +283,7 @@ class Integration:
             if len(new_review_description) > 0:
                 new_review_description = new_review_description + review_description
 
-            elif len(new_review_description) == 0 and update_review_description:
+            elif len(new_review_description) == 0 and is_review_description_updated:
                 new_review_description = review_description
 
         if len(new_review_description) > 0:
