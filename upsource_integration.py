@@ -9,6 +9,9 @@ from requests.auth import HTTPBasicAuth
 
 
 class Integration:
+    ISSUE_TASK_ID_PATTERN = r'^\[\w+-\d+-\d+\]' # Example: Notif-163189-16732
+
+
     def __init__(self, issue, issue_task, review, logger):
         self.issue = issue
         self.issue_task = issue_task
@@ -247,23 +250,45 @@ class Integration:
         if 'description' in review_data:
             review_description = review_data['description']
 
-        new_review_description = ''
-        if len(review_description) == 0:
+        new_review_description = review_description
+        if len(new_review_description) == 0:
             for issue_task in issue_tasks:
                 issue_task_key = issue_task['TRACKOR_KEY']
                 issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
                 new_review_description = '[{0}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description)
-        else:            
+        else:
+            split_review_description = re.split('\n', new_review_description)
+            for description_line in split_review_description:
+                if re.search(self.ISSUE_TASK_ID_PATTERN, description_line) is None:
+                    break
+
+                else:
+                    is_issue_task_deleted = True
+                    for issue_task in issue_tasks:
+                        issue_task_key = issue_task['TRACKOR_KEY']
+                        issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
+                        if issue_task_key in description_line:
+
+                            if issue_task_code_reviewer not in description_line:
+                                new_code_reviewer_in_description = '[{0}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={0}) {1}'.format(issue_task_key, issue_task_code_reviewer)
+                                new_review_description = new_review_description.replace(description_line, new_code_reviewer_in_description)
+
+                            is_issue_task_deleted = False
+                            break
+                    
+                    if is_issue_task_deleted:
+                        if description_line + '\n' in new_review_description:
+                            new_review_description = new_review_description.replace(description_line + '\n', '')
+                        else:
+                            new_review_description = new_review_description.replace(description_line, '')
+
             for issue_task in issue_tasks:
                 issue_task_key = issue_task['TRACKOR_KEY']
                 issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
-                if re.search(issue_task_key, review_description) is None:
+                if re.search(issue_task_key, new_review_description) is None:
                     new_review_description = '[{0}](https://trackor.onevizion.com/trackor_types/Issue_Task/trackors.do?key={0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description)
 
-            if len(new_review_description) > 0:
-                new_review_description = new_review_description + review_description
-
-        if len(new_review_description) > 0:
+        if review_description != new_review_description:
             self.review.update_review_description(review_id, new_review_description)
 
     def add_revision_to_review(self, review_data, review_id, issue_title):
