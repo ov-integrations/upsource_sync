@@ -10,16 +10,8 @@ Requirements
 
 Features
 - creates new code reviews for "Ready for Review" Issues
-- creates new Code Review Issue Tasks
-- updates statuses of Code Review Issue Tasks
-- adds new commits to the reviews (restores statuses if there are no changes related to the review scope)
-- assigns reviewer based on the file type
-- assigns a default reviewer from the default review scope if no one is assigned to the review
-- adds and removes review labels:
-  + when creating a review, XXX label depending on the type of code will be added 
-  + when concern raised, !XXX label related to this reviewer will be added, XXX label will be removed
-  + label "work in progress" is added when the Issue status changed back to "In Process"
-  + label "current release" is added, when related Issue targeted for the next release and will be removed, when current release is tested in UAT and released in PROD
+- assigns reviewer based on Issue Task
+- adds statuses Accepted\Raise Concern to reviewer based on Issue Task
 
 Permissions for user Trackor Integration:
 - upsource

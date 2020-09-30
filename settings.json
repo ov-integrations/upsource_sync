@@ -11,51 +11,23 @@
     "loginUpsource": "login",
     "passUpsource": "password",
     "projectUpsource": "project name",
-    "reviewScopes": [
+    "reviewers": [
         {
-            "label": "label name1",
-            "filePatterns": [
-                "File Extension1"
-            ],
-            "reviewers": [
-                {
-                    "name": "Upsource Full Name1",
-                    "ovName" : "OV Name1",
-                    "token": "Upsource token1"
-                }
-            ]
+            "name": "Upsource Full Name1",
+            "ovName" : "OV Name1"
         },
         {
-            "label": "label name2",
-            "filePatterns": [
-                "File Extension2",
-                "File Extension3"
-            ],
-            "reviewers": [
-                {
-                    "name": "Upsource Full Name2",
-                    "ovName" : "OV Name2",
-                    "token": "Upsource token2"
-                }
-            ]
+            "name": "Upsource Full Name2",
+            "ovName" : "OV Name2"
         }
     ],
-    "defaultReviewScope": {
-        "reviewers": [
-            {
-                "name": "Upsource Full Name3",
-                "ovName": "OV Name3",
-                "token": "Upsource token3"
-            }
-        ]
-    },
+
     "issueStatuses": {
         "test": "Test",
         "readyForMerge": "Ready for Merge",
         "closed": "Closed",
         "completed": "Completed",
         "canceled": "Canceled",
-        "inProgress": "In Progress",
         "readyForReview": "Ready for Review"
     },
     "issueFields": {
@@ -64,8 +36,7 @@
         "status": "VQS_IT_STATUS",
         "summary": "VQS_IT_XITOR_NAME",
         "product": "Product.TRACKOR_KEY",
-        "codeReviewUrl": "I_CODE_REVIEW",
-        "uatReleaseDate": "Version.VER_UAT_DATE"
+        "codeReviewUrl": "I_CODE_REVIEW"
     },
     "issueTaskFields": {
         "id": "TRACKOR_ID",
@@ -84,7 +55,6 @@
         "codeReviewLabel": "Code Review"
     },
     "issueTaskStatuses": {
-        "opened": "Opened",
         "awaitingResponse": "Awaiting Response",
         "completed": "Completed"
     }

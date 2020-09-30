@@ -19,8 +19,7 @@ user_name_upsource = password_data["userNameUpsource"]
 login_upsource = password_data["loginUpsource"]
 pass_upsource = password_data["passUpsource"]
 project_upsource = password_data["projectUpsource"]
-review_scopes = password_data["reviewScopes"]
-default_review_scope = password_data["defaultReviewScope"]
+reviewers = password_data["reviewers"]
 
 url_onevizion = re.sub("^https://", "", password_data["urlOneVizion"][:-1])
 login_onevizion = password_data["loginOneVizion"]
@@ -40,8 +39,8 @@ issue = Issue(url_onevizion, login_onevizion, pass_onevizion, product_onevizion,
               issue_fields)
 issue_task = IssueTask(url_onevizion, login_onevizion, pass_onevizion, issue_trackor_type, issue_task_trackor_type,
                        issue_fields, issue_task_fields, issue_task_types, issue_task_statuses)
-review = Review(url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, review_scopes,
-                default_review_scope, logger)
+review = Review(url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, reviewers,
+                logger)
 integration = Integration(issue, issue_task, review, logger)
 
 integration.start_integration()
