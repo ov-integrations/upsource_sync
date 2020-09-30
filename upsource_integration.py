@@ -258,7 +258,7 @@ class Integration:
                     is_issue_task_deleted = True
                     for issue_task in issue_tasks:
                         issue_task_key = issue_task['TRACKOR_KEY']
-                        issue_task_code_reviewer = issue_task['IT_CODE_REVIEWER']
+                        issue_task_code_reviewer = str(issue_task['IT_CODE_REVIEWER'])
                         if issue_task_key in description_line:
 
                             if issue_task_code_reviewer not in description_line:
