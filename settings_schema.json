@@ -182,6 +182,10 @@
         "issueTaskStatuses" : {
             "type": "object",
             "properties": {
+                "opened": {
+                    "type": "string",
+                    "minLength": 1
+                },
                 "completed": {
                     "type": "string",
                     "minLength": 1

@@ -55,6 +55,7 @@
         "codeReviewLabel": "Code Review"
     },
     "issueTaskStatuses": {
+        "opened": "Opened",
         "awaitingResponse": "Awaiting Response",
         "completed": "Completed"
     }
