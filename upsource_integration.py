@@ -130,6 +130,7 @@ class Integration:
                             self.log.debug('Review ' + str(review_id) + ' closed for Issue ' + issue_title)
 
                     else:
+                        self.update_code_review_url_for_issue(review_id, issue)
                         issue_tasks = self.issue_task.find_issue_tasks(issue_title)
                         self.add_task_urls_to_description(review_data, review_id, issue_tasks)
                         self.remove_reviewers(review_data, review_id, issue_tasks)
@@ -143,6 +144,12 @@ class Integration:
         else:
             return None
 
+    def update_code_review_url_for_issue(self, review_id, issue):
+        issue_id = issue[0][self.issue.issue_fields.ID]
+        issue_code_review_url = issue[0][self.issue.issue_fields.CODE_REVIEW_URL]
+        if issue_code_review_url is None:
+            self.issue.update_code_review_url(issue_id, self.review.get_review_url(review_id))
+
     def add_task_urls_to_description(self, review_data, review_id, issue_tasks):
         issue_task_url = self.url_onevizion + '/trackor_types/' + self.issue_task_trackor_type + '/trackors.do?key='
 
@@ -155,7 +162,7 @@ class Integration:
             for issue_task in issue_tasks:
                 issue_task_key = issue_task[self.issue_task.issue_task_fields.TITLE]
                 issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
-                new_review_description = '[{0}]({3}{0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description, issue_task_url)
+                new_review_description = '[{0}]({1}{0}) {2}\n{3}'.format(issue_task_key, issue_task_url, issue_task_code_reviewer, new_review_description)
         else:
             split_review_description = re.split('\n', new_review_description)
             for description_line in split_review_description:
@@ -170,7 +177,7 @@ class Integration:
                         if issue_task_key in description_line:
 
                             if issue_task_code_reviewer not in description_line:
-                                new_code_reviewer_in_description = '[{0}]({2}{0}) {1}'.format(issue_task_key, issue_task_code_reviewer, issue_task_url)
+                                new_code_reviewer_in_description = '[{0}]({1}{0}) {2}'.format(issue_task_key, issue_task_url, issue_task_code_reviewer)
                                 new_review_description = new_review_description.replace(description_line, new_code_reviewer_in_description)
 
                             is_issue_task_deleted = False
@@ -186,7 +193,7 @@ class Integration:
                 issue_task_key = issue_task[self.issue_task.issue_task_fields.TITLE]
                 issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
                 if re.search(issue_task_key, new_review_description) is None:
-                    new_review_description = '[{0}]({3}{0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description, issue_task_url)
+                    new_review_description = '[{0}]({1}{0}) {2}\n{3}'.format(issue_task_key, issue_task_url, issue_task_code_reviewer, new_review_description)
 
         if review_description != new_review_description:
             self.review.update_review_description(review_id, new_review_description)
@@ -312,7 +319,7 @@ class Issue:
     def get_list_by_title(self, issue_title):
         self.issue_service.read(
             filters={self.issue_fields.PRODUCT: self.product_onevizion, self.issue_fields.TITLE: issue_title},
-            fields=[self.issue_fields.TITLE, self.issue_fields.STATUS]
+            fields=[self.issue_fields.TITLE, self.issue_fields.STATUS, self.issue_fields.CODE_REVIEW_URL]
         )
 
         return self.issue_service.jsonData
