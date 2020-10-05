@@ -30,9 +30,7 @@ class Integration:
             issue_summary = issue[self.issue.issue_fields.SUMMARY]
 
             review = self.review.get_list_on_query(issue_title)
-            if review is None or (isinstance(review, list) and len(review) > 0 and 'reviewId' in review[0]):
-                continue
-            else:
+            if review is not None and isinstance(review, list) is False:
                 revision_id = self.find_revision(issue_title)
                 if revision_id is not None:
                     self.create_review(revision_id, issue_id, issue_title, issue_summary)
@@ -146,7 +144,7 @@ class Integration:
             return None
 
     def add_task_urls_to_description(self, review_data, review_id, issue_tasks):
-        ISSUE_TASK_URL = self.url_onevizion + '/trackor_types/' + self.issue_task_trackor_type + '/trackors.do?key='
+        issue_task_url = self.url_onevizion + '/trackor_types/' + self.issue_task_trackor_type + '/trackors.do?key='
 
         review_description = ''
         if 'description' in review_data:
@@ -157,7 +155,7 @@ class Integration:
             for issue_task in issue_tasks:
                 issue_task_key = issue_task[self.issue_task.issue_task_fields.TITLE]
                 issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
-                new_review_description = '[{0}]({3}{0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description, ISSUE_TASK_URL)
+                new_review_description = '[{0}]({3}{0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description, issue_task_url)
         else:
             split_review_description = re.split('\n', new_review_description)
             for description_line in split_review_description:
@@ -172,7 +170,7 @@ class Integration:
                         if issue_task_key in description_line:
 
                             if issue_task_code_reviewer not in description_line:
-                                new_code_reviewer_in_description = '[{0}]({2}{0}) {1}'.format(issue_task_key, issue_task_code_reviewer, ISSUE_TASK_URL)
+                                new_code_reviewer_in_description = '[{0}]({2}{0}) {1}'.format(issue_task_key, issue_task_code_reviewer, issue_task_url)
                                 new_review_description = new_review_description.replace(description_line, new_code_reviewer_in_description)
 
                             is_issue_task_deleted = False
@@ -188,7 +186,7 @@ class Integration:
                 issue_task_key = issue_task[self.issue_task.issue_task_fields.TITLE]
                 issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
                 if re.search(issue_task_key, new_review_description) is None:
-                    new_review_description = '[{0}]({3}{0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description, ISSUE_TASK_URL)
+                    new_review_description = '[{0}]({3}{0}) {1}\n{2}'.format(issue_task_key, issue_task_code_reviewer, new_review_description, issue_task_url)
 
         if review_description != new_review_description:
             self.review.update_review_description(review_id, new_review_description)
