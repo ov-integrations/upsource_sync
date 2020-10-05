@@ -259,7 +259,7 @@ class Integration:
                     if participant_id == reviewer_id:
                         is_accepted = True
                         is_rejected = False
-                        issue_tasks = self.issue_task.find_issue_tasks_for_reviewer(issue_title, reviewer_ov_name)
+                        issue_tasks = self.issue_task.find_issue_tasks_for_reviewer(issue_title, reviewer_ov_name, self.issue_task.issue_task_statuses.get_statuses_for_reviewer())
                         if len(issue_tasks) > 0:
                             for issue_task in issue_tasks:
                                 issue_task_status = issue_task[self.issue_task.issue_task_fields.STATUS]
@@ -275,7 +275,9 @@ class Integration:
                                     is_accepted = False
 
                             if is_accepted and participant_state != ParticipantState.ACCEPTED.value:
-                                self.review.update_participant_status(ParticipantState.ACCEPTED.value, reviewer_id, review_id)
+                                issue_tasks_in_progress = self.issue_task.find_issue_tasks_for_reviewer(issue_title, reviewer_ov_name, self.issue_task.issue_task_statuses.IN_PROGRESS)
+                                if len(issue_tasks_in_progress) == 0:
+                                    self.review.update_participant_status(ParticipantState.ACCEPTED.value, reviewer_id, review_id)
 
                             if is_rejected is False and is_accepted is False and participant_state != ParticipantState.READ.value:
                                 self.review.update_participant_status(ParticipantState.READ.value, reviewer_id, review_id)
@@ -337,12 +339,12 @@ class IssueTask:
 
         return self.issue_task_service.jsonData
 
-    def find_issue_tasks_for_reviewer(self, issue_title, reviewer):
+    def find_issue_tasks_for_reviewer(self, issue_title, reviewer, status):
         self.issue_task_service.read(
             filters={self.issue_task_fields.TYPE: self.issue_task_types.CODE_REVIEW_LABEL,
                      self.issue_task_fields.ISSUE: issue_title,
                      self.issue_task_fields.REVIEWER: reviewer,
-                     self.issue_task_fields.STATUS: self.issue_task_statuses.get_statuses_for_reviewer()},
+                     self.issue_task_fields.STATUS: status},
             fields=[self.issue_task_fields.STATUS])
 
         return self.issue_task_service.jsonData
@@ -396,6 +398,7 @@ class IssueTaskStatuses:
         self.OPENED = issue_task_statuses[IssueTaskStatus.OPENED.value]
         self.COMPLETED = issue_task_statuses[IssueTaskStatus.COMPLETED.value]
         self.AWAITING_RESPONSE = issue_task_statuses[IssueTaskStatus.AWAITING_RESPONSE.value]
+        self.IN_PROGRESS = issue_task_statuses[IssueTaskStatus.IN_PROGRESS.value]
 
     def get_statuses_for_reviewer(self):
         statuses = '{},{},{}'.format(self.OPENED, self.COMPLETED, self.AWAITING_RESPONSE)
@@ -549,6 +552,7 @@ class IssueStatus(Enum):
 class IssueTaskStatus(Enum):
     OPENED = 'opened'
     COMPLETED = 'completed'
+    IN_PROGRESS = 'inProgress'
     AWAITING_RESPONSE = 'awaitingResponse'
 
 
