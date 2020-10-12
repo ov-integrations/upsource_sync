@@ -222,7 +222,7 @@ class Integration:
 
                     if reviewer_id == user_id:
                         for issue_task in issue_tasks:
-                            issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
+                            issue_task_code_reviewer = str(issue_task[self.issue_task.issue_task_fields.REVIEWER])
                             if reviewer_ov_name in issue_task_code_reviewer:
                                 is_reviewer_deleted = False
                                 break
@@ -239,14 +239,15 @@ class Integration:
 
             for issue_task in issue_tasks:
                 issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
-                for reviewer in self.reviewers:
-                    reviewer_id = reviewer['reviewer_id']
-                    reviewer_ov_name = reviewer['reviewer_ov_name']
+                if issue_task_code_reviewer is not None:
+                    for reviewer in self.reviewers:
+                        reviewer_id = reviewer['reviewer_id']
+                        reviewer_ov_name = reviewer['reviewer_ov_name']
 
-                    if reviewer_ov_name in issue_task_code_reviewer and reviewer_id not in reviewers_list:
-                        self.review.add_reviewer(reviewer_id, reviewer_ov_name, review_id)
-                        reviewers_list.append(reviewer_id)
-                        break
+                        if reviewer_ov_name in issue_task_code_reviewer and reviewer_id not in reviewers_list:
+                            self.review.add_reviewer(reviewer_id, reviewer_ov_name, review_id)
+                            reviewers_list.append(reviewer_id)
+                            break
 
 
     def update_participant_status_for_review(self, review_id, issue_title):
