@@ -132,6 +132,7 @@ class Integration:
                     else:
                         self.update_code_review_url_for_issue(review_id, issue)
                         issue_tasks = self.issue_task.find_issue_tasks(issue_title)
+                        self.update_code_review_url_for_issue_tasks(review_id, issue_tasks)
                         self.add_task_urls_to_description(review_data, review_id, issue_tasks)
                         self.remove_reviewers(review_data, review_id, issue_tasks)
                         self.add_reviewers(review_id, issue_tasks)
@@ -149,6 +150,14 @@ class Integration:
         issue_code_review_url = issue[0][self.issue.issue_fields.CODE_REVIEW_URL]
         if issue_code_review_url is None:
             self.issue.update_code_review_url(issue_id, self.review.get_review_url(review_id))
+
+    def update_code_review_url_for_issue_tasks(self, review_id, issue_tasks):
+        for issue_task in issue_tasks:
+            issue_task_id = issue_task[self.issue_task.issue_task_fields.ID]
+            issue_task_code_review_url = issue_task[self.issue_task.issue_task_fields.CODE_REVIEW_URL]
+
+            if issue_task_code_review_url is None:
+                self.issue_task.update_code_review_url(issue_task_id, self.review.get_review_url(review_id))    
 
     def add_task_urls_to_description(self, review_data, review_id, issue_tasks):
         issue_task_url = 'https://' + self.url_onevizion + '/trackor_types/' + self.issue_task_trackor_type + '/trackors.do?key='
@@ -343,7 +352,7 @@ class IssueTask:
         self.issue_task_service.read(
             filters={self.issue_task_fields.TYPE: self.issue_task_types.CODE_REVIEW_LABEL,
                      self.issue_task_fields.ISSUE: issue_title},
-            fields=[self.issue_task_fields.REVIEWER, self.issue_task_fields.STATUS, self.issue_task_fields.TITLE])
+            fields=[self.issue_task_fields.REVIEWER, self.issue_task_fields.STATUS, self.issue_task_fields.TITLE, self.issue_task_fields.CODE_REVIEW_URL])
 
         return self.issue_task_service.jsonData
 
@@ -357,6 +366,11 @@ class IssueTask:
 
         return self.issue_task_service.jsonData
 
+    def update_code_review_url(self, issue_task_id, code_review_url):
+        self.issue_task_service.update(
+            trackorId=issue_task_id,
+            fields={self.issue_task_fields.CODE_REVIEW_URL: code_review_url}
+        )
 
 class IssueStatuses:
     def __init__(self, issue_statuses):
