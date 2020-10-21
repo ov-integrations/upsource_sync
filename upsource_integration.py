@@ -132,11 +132,12 @@ class Integration:
                     else:
                         self.update_code_review_url_for_issue(review_id, issue)
                         issue_tasks = self.issue_task.find_issue_tasks(issue_title)
-                        self.update_code_review_url_for_issue_tasks(review_id, issue_tasks)
-                        self.add_task_urls_to_description(review_data, review_id, issue_tasks)
-                        self.remove_reviewers(review_data, review_id, issue_tasks)
-                        self.add_reviewers(review_id, issue_tasks)
-                        self.update_participant_status_for_review(review_id, issue_title)
+                        if len(issue_tasks) > 0:
+                            self.update_code_review_url_for_issue_tasks(review_id, issue_tasks)
+                            self.add_task_urls_to_description(review_data, review_id, issue_tasks)
+                            self.remove_reviewers(review_data, review_id, issue_tasks)
+                            self.add_reviewers(review_id, issue_tasks)
+                            self.update_participant_status_for_review(review_id, issue_title)
 
     def get_issue_title(self, review_title):
         issue_title = re.search(Integration.ISSUE_ID_PATTERN, review_title)
@@ -328,7 +329,7 @@ class Issue:
 
     def get_list_by_title(self, issue_title):
         self.issue_service.read(
-            filters={self.issue_fields.PRODUCT: self.product_onevizion, self.issue_fields.TITLE: issue_title},
+            filters={self.issue_fields.TITLE: issue_title},
             fields=[self.issue_fields.TITLE, self.issue_fields.STATUS, self.issue_fields.CODE_REVIEW_URL]
         )
 
