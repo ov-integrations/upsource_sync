@@ -1,6 +1,5 @@
 import json
 import re
-from datetime import datetime, timedelta
 from enum import Enum
 
 import onevizion
@@ -9,8 +8,8 @@ from requests.auth import HTTPBasicAuth
 
 
 class Integration:
-    ISSUE_ID_PATTERN = r'\w+-\d+' # Example: Notif-163189
-    ISSUE_TASK_ID_PATTERN = r'^\[\w+-\d+-\d+\]' # Example: Notif-163189-16732
+    ISSUE_ID_PATTERN = r'\w+-\d+'  # Example: Notif-163189
+    ISSUE_TASK_ID_PATTERN = r'^\[\w+-\d+-\d+\]'  # Example: Notif-163189-16732
 
     def __init__(self, issue, issue_task, review, logger):
         self.issue = issue
@@ -158,7 +157,7 @@ class Integration:
             issue_task_code_review_url = issue_task[self.issue_task.issue_task_fields.CODE_REVIEW_URL]
 
             if issue_task_code_review_url is None:
-                self.issue_task.update_code_review_url(issue_task_id, self.review.get_review_url(review_id))    
+                self.issue_task.update_code_review_url(issue_task_id, self.review.get_review_url(review_id))
 
     def add_task_urls_to_description(self, review_data, review_id, issue_tasks):
         issue_task_url = 'https://' + self.url_onevizion + '/trackor_types/' + self.issue_task_trackor_type + '/trackors.do?key='
@@ -172,7 +171,9 @@ class Integration:
             for issue_task in issue_tasks:
                 issue_task_key = issue_task[self.issue_task.issue_task_fields.TITLE]
                 issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
-                new_review_description = '[{0}]({1}{0}) {2}\n{3}'.format(issue_task_key, issue_task_url, issue_task_code_reviewer, new_review_description)
+                new_review_description = '[{0}]({1}{0}) {2}\n{3}'.format(issue_task_key, issue_task_url,
+                                                                         issue_task_code_reviewer,
+                                                                         new_review_description)
         else:
             split_review_description = re.split('\n', new_review_description)
             for description_line in split_review_description:
@@ -187,8 +188,11 @@ class Integration:
                         if issue_task_key in description_line:
 
                             if issue_task_code_reviewer not in description_line:
-                                new_code_reviewer_in_description = '[{0}]({1}{0}) {2}'.format(issue_task_key, issue_task_url, issue_task_code_reviewer)
-                                new_review_description = new_review_description.replace(description_line, new_code_reviewer_in_description)
+                                new_code_reviewer_in_description = '[{0}]({1}{0}) {2}'.format(issue_task_key,
+                                                                                              issue_task_url,
+                                                                                              issue_task_code_reviewer)
+                                new_review_description = new_review_description.replace(description_line,
+                                                                                        new_code_reviewer_in_description)
 
                             is_issue_task_deleted = False
                             break
@@ -203,7 +207,9 @@ class Integration:
                 issue_task_key = issue_task[self.issue_task.issue_task_fields.TITLE]
                 issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
                 if re.search(issue_task_key, new_review_description) is None:
-                    new_review_description = '[{0}]({1}{0}) {2}\n{3}'.format(issue_task_key, issue_task_url, issue_task_code_reviewer, new_review_description)
+                    new_review_description = '[{0}]({1}{0}) {2}\n{3}'.format(issue_task_key, issue_task_url,
+                                                                             issue_task_code_reviewer,
+                                                                             new_review_description)
 
         if review_description != new_review_description:
             self.review.update_review_description(review_id, new_review_description)
@@ -214,7 +220,8 @@ class Integration:
             for participant in review_data['participants']:
                 if participant['role'] == ParticipantRole.REVIEWER.value:
                     if state:
-                        reviewers_list.append({'participant_id':participant['userId'], 'participant_state':participant['state']})
+                        reviewers_list.append(
+                            {'participant_id': participant['userId'], 'participant_state': participant['state']})
                     else:
                         reviewers_list.append(participant['userId'])
 
@@ -239,7 +246,7 @@ class Integration:
 
                         if is_reviewer_deleted:
                             self.review.remove_reviewer(reviewer_id, reviewer_ov_name, review_id)
-                            
+
                         break
 
     def add_reviewers(self, review_id, issue_tasks):
@@ -259,7 +266,6 @@ class Integration:
                             reviewers_list.append(reviewer_id)
                             break
 
-
     def update_participant_status_for_review(self, review_id, issue_title):
         review_data = self.review.get_list_on_query(review_id)
         if isinstance(review_data, list) and len(review_data) > 0 and 'reviewId' in review_data[0]:
@@ -277,14 +283,19 @@ class Integration:
                     if participant_id == reviewer_id:
                         is_accepted = True
                         is_rejected = False
-                        issue_tasks = self.issue_task.find_issue_tasks_for_reviewer(issue_title, reviewer_ov_name, self.issue_task.issue_task_statuses.get_statuses_for_reviewer())
+                        issue_tasks = self.issue_task.find_issue_tasks_for_reviewer(issue_title, reviewer_ov_name,
+                                                                                    self.issue_task.issue_task_statuses.get_statuses_for_reviewer())
                         if len(issue_tasks) > 0:
                             for issue_task in issue_tasks:
                                 issue_task_status = issue_task[self.issue_task.issue_task_fields.STATUS]
 
-                                if issue_task_status == self.issue_task.issue_task_statuses.AWAITING_RESPONSE:
-                                    if participant_state != ParticipantState.REJECTED.value:
-                                        self.review.update_participant_status(ParticipantState.REJECTED.value, reviewer_id, review_id)
+                                if issue_task_status in (self.issue_task.issue_task_statuses.AWAITING_RESPONSE,
+                                                         self.issue_task.issue_task_statuses.CONCERN_RAISED):
+                                    if participant_state != ParticipantState.REJECTED.value \
+                                            and issue_task_status != self.issue_task.issue_task_statuses.CONCERN_RAISED:
+                                        self.review.update_participant_status(ParticipantState.REJECTED.value,
+                                                                              reviewer_id, review_id)
+                                        self.issue_task.update_concern_raised(issue_task[self.issue_task.issue_task_fields.ID])
                                     is_rejected = True
                                     is_accepted = False
                                     break
@@ -293,12 +304,16 @@ class Integration:
                                     is_accepted = False
 
                             if is_accepted and participant_state != ParticipantState.ACCEPTED.value:
-                                issue_tasks_in_progress = self.issue_task.find_issue_tasks_for_reviewer(issue_title, reviewer_ov_name, self.issue_task.issue_task_statuses.IN_PROGRESS)
+                                issue_tasks_in_progress = self.issue_task.find_issue_tasks_for_reviewer(issue_title,
+                                                                                                        reviewer_ov_name,
+                                                                                                        self.issue_task.issue_task_statuses.IN_PROGRESS)
                                 if len(issue_tasks_in_progress) == 0:
-                                    self.review.update_participant_status(ParticipantState.ACCEPTED.value, reviewer_id, review_id)
+                                    self.review.update_participant_status(ParticipantState.ACCEPTED.value, reviewer_id,
+                                                                          review_id)
 
                             if is_rejected is False and is_accepted is False and participant_state != ParticipantState.READ.value:
-                                self.review.update_participant_status(ParticipantState.READ.value, reviewer_id, review_id)
+                                self.review.update_participant_status(ParticipantState.READ.value, reviewer_id,
+                                                                      review_id)
 
                         break
 
@@ -353,7 +368,8 @@ class IssueTask:
         self.issue_task_service.read(
             filters={self.issue_task_fields.TYPE: self.issue_task_types.CODE_REVIEW_LABEL,
                      self.issue_task_fields.ISSUE: issue_title},
-            fields=[self.issue_task_fields.REVIEWER, self.issue_task_fields.STATUS, self.issue_task_fields.TITLE, self.issue_task_fields.CODE_REVIEW_URL])
+            fields=[self.issue_task_fields.REVIEWER, self.issue_task_fields.STATUS, self.issue_task_fields.TITLE,
+                    self.issue_task_fields.CODE_REVIEW_URL])
 
         return self.issue_task_service.jsonData
 
@@ -372,6 +388,13 @@ class IssueTask:
             trackorId=issue_task_id,
             fields={self.issue_task_fields.CODE_REVIEW_URL: code_review_url}
         )
+
+    def update_concern_raised(self, issue_task_id):
+        self.issue_task_service.update(
+            trackorId=issue_task_id,
+            fields={self.issue_task_fields.CONCERN_RAISED: '1'}
+        )
+
 
 class IssueStatuses:
     def __init__(self, issue_statuses):
@@ -408,6 +431,7 @@ class IssueTaskFields:
         self.ISSUE = issue_task_fields[IssueTaskField.ISSUE.value]
         self.REVIEWER = issue_task_fields[IssueTaskField.REVIEWER.value]
         self.CODE_REVIEW_URL = issue_task_fields[IssueTaskField.CODE_REVIEW_URL.value]
+        self.CONCERN_RAISED = issue_task_fields[IssueTaskField.CONCERN_RAISED.value]
 
 
 class IssueTaskTypes:
@@ -422,9 +446,10 @@ class IssueTaskStatuses:
         self.COMPLETED = issue_task_statuses[IssueTaskStatus.COMPLETED.value]
         self.AWAITING_RESPONSE = issue_task_statuses[IssueTaskStatus.AWAITING_RESPONSE.value]
         self.IN_PROGRESS = issue_task_statuses[IssueTaskStatus.IN_PROGRESS.value]
+        self.CONCERN_RAISED = issue_task_statuses[IssueTaskStatus.CONCERN_RAISED.value]
 
     def get_statuses_for_reviewer(self):
-        statuses = '{},{},{}'.format(self.OPENED, self.COMPLETED, self.AWAITING_RESPONSE)
+        statuses = '{},{},{},{}'.format(self.OPENED, self.COMPLETED, self.AWAITING_RESPONSE, self.CONCERN_RAISED)
         return statuses
 
 
@@ -487,7 +512,8 @@ class Review:
 
     def update_participant_status(self, state, reviewer_id, review_id):
         url = self.url_upsource + '~rpc/updateParticipantInReview'
-        data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id}, "state": state, "userId":reviewer_id}
+        data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id}, "state": state,
+                "userId": reviewer_id}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to update_participant_status. Exception [%s]' % str(answer.text))
@@ -577,6 +603,7 @@ class IssueTaskStatus(Enum):
     COMPLETED = 'completed'
     IN_PROGRESS = 'inProgress'
     AWAITING_RESPONSE = 'awaitingResponse'
+    CONCERN_RAISED = 'concernRaised'
 
 
 class IssueField(Enum):
@@ -599,6 +626,7 @@ class IssueTaskField(Enum):
     ISSUE = 'issue'
     REVIEWER = 'reviewer'
     CODE_REVIEW_URL = 'codeReviewUrl'
+    CONCERN_RAISED = 'concernRaised'
 
 
 class IssueTaskType(Enum):
@@ -614,4 +642,3 @@ class ParticipantState(Enum):
 
 class ParticipantRole(Enum):
     REVIEWER = 2
-

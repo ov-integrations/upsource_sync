@@ -48,7 +48,8 @@
         "assignedTo": "IT_ASSIGNED_TO",
         "issue": "Issue.TRACKOR_KEY",
         "reviewer": "IT_CODE_REVIEWER",
-        "codeReviewUrl": "IT_CODE_REVIEW_URL"
+        "codeReviewUrl": "IT_CODE_REVIEW_URL",
+        "concernRaised": "IT_REVIEW_CONCERN_RAISED"
     },
     "issueTaskTypes": {
         "codeReview": "CR",
@@ -58,6 +59,7 @@
         "opened": "Opened",
         "inProgress": "In Progress",
         "awaitingResponse": "Awaiting Response",
-        "completed": "Completed"
+        "completed": "Completed",
+        "concernRaised": "Concern Raised"
     }
 }

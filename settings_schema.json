@@ -163,6 +163,10 @@
                 "codeReviewUrl": {
                     "type": "string",
                     "minLength": 1
+                },
+                "concernRaised": {
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         },
@@ -195,6 +199,10 @@
                     "minLength": 1
                 },
                 "awaitingResponse": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "concernRaised": {
                     "type": "string",
                     "minLength": 1
                 }
