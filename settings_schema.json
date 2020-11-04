@@ -205,6 +205,10 @@
                 "concernRaised": {
                     "type": "string",
                     "minLength": 1
+                },
+                "canceled": {
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         }

@@ -60,6 +60,7 @@
         "inProgress": "In Progress",
         "awaitingResponse": "Awaiting Response",
         "completed": "Completed",
+        "canceled": "Canceled",
         "concernRaised": "Concern Raised"
     }
 }
