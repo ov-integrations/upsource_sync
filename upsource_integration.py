@@ -171,9 +171,11 @@ class Integration:
             for issue_task in issue_tasks:
                 issue_task_key = issue_task[self.issue_task.issue_task_fields.TITLE]
                 issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
-                new_review_description = '[{0}]({1}{0}) {2}\n{3}'.format(issue_task_key, issue_task_url,
-                                                                         issue_task_code_reviewer,
-                                                                         new_review_description)
+                issue_task_status = issue_task[self.issue_task.issue_task_fields.STATUS]
+                if issue_task_status in self.issue_task.issue_task_statuses.get_statuses_until_canceled():
+                    new_review_description = '[{0}]({1}{0}) {2}\n{3}'.format(issue_task_key, issue_task_url,
+                                                                             issue_task_code_reviewer,
+                                                                             new_review_description)
         else:
             split_review_description = re.split('\n', new_review_description)
             for description_line in split_review_description:
@@ -185,16 +187,20 @@ class Integration:
                     for issue_task in issue_tasks:
                         issue_task_key = issue_task[self.issue_task.issue_task_fields.TITLE]
                         issue_task_code_reviewer = str(issue_task[self.issue_task.issue_task_fields.REVIEWER])
+                        issue_task_status = issue_task[self.issue_task.issue_task_fields.STATUS]
                         if issue_task_key in description_line:
 
-                            if issue_task_code_reviewer not in description_line:
-                                new_code_reviewer_in_description = '[{0}]({1}{0}) {2}'.format(issue_task_key,
-                                                                                              issue_task_url,
-                                                                                              issue_task_code_reviewer)
-                                new_review_description = new_review_description.replace(description_line,
-                                                                                        new_code_reviewer_in_description)
+                            if issue_task_status in self.issue_task.issue_task_statuses.get_statuses_until_canceled():
 
-                            is_issue_task_deleted = False
+                                if issue_task_code_reviewer not in description_line:
+                                    new_code_reviewer_in_description = '[{0}]({1}{0}) {2}'.format(issue_task_key,
+                                                                                                  issue_task_url,
+                                                                                                  issue_task_code_reviewer)
+                                    new_review_description = new_review_description.replace(description_line,
+                                                                                            new_code_reviewer_in_description)
+
+                                is_issue_task_deleted = False
+
                             break
 
                     if is_issue_task_deleted:
@@ -206,7 +212,9 @@ class Integration:
             for issue_task in issue_tasks:
                 issue_task_key = issue_task[self.issue_task.issue_task_fields.TITLE]
                 issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
-                if re.search(issue_task_key, new_review_description) is None:
+                issue_task_status = issue_task[self.issue_task.issue_task_fields.STATUS]
+                if re.search(issue_task_key, new_review_description) is None \
+                        and issue_task_status in self.issue_task.issue_task_statuses.get_statuses_until_canceled():
                     new_review_description = '[{0}]({1}{0}) {2}\n{3}'.format(issue_task_key, issue_task_url,
                                                                              issue_task_code_reviewer,
                                                                              new_review_description)
@@ -240,8 +248,10 @@ class Integration:
                     if reviewer_id == user_id:
                         for issue_task in issue_tasks:
                             issue_task_code_reviewer = str(issue_task[self.issue_task.issue_task_fields.REVIEWER])
+                            issue_task_status = issue_task[self.issue_task.issue_task_fields.STATUS]
                             if reviewer_ov_name in issue_task_code_reviewer:
-                                is_reviewer_deleted = False
+                                if issue_task_status in self.issue_task.issue_task_statuses.get_statuses_until_canceled():
+                                    is_reviewer_deleted = False
                                 break
 
                         if is_reviewer_deleted:
@@ -256,7 +266,9 @@ class Integration:
 
             for issue_task in issue_tasks:
                 issue_task_code_reviewer = issue_task[self.issue_task.issue_task_fields.REVIEWER]
-                if issue_task_code_reviewer is not None:
+                issue_task_status = issue_task[self.issue_task.issue_task_fields.STATUS]
+                if issue_task_code_reviewer is not None \
+                        and issue_task_status in self.issue_task.issue_task_statuses.get_statuses_until_canceled():
                     for reviewer in self.reviewers:
                         reviewer_id = reviewer['reviewer_id']
                         reviewer_ov_name = reviewer['reviewer_ov_name']
@@ -451,6 +463,9 @@ class IssueTaskStatuses:
     def get_statuses_for_reviewer(self):
         statuses = '{},{},{},{}'.format(self.OPENED, self.COMPLETED, self.AWAITING_RESPONSE, self.CONCERN_RAISED)
         return statuses
+
+    def get_statuses_until_canceled(self):
+        return [self.OPENED, self.COMPLETED, self.AWAITING_RESPONSE, self.CONCERN_RAISED, self.IN_PROGRESS]
 
 
 class Review:
