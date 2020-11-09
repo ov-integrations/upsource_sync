@@ -8,8 +8,9 @@ from requests.auth import HTTPBasicAuth
 
 
 class Integration:
-    ISSUE_ID_PATTERN = r'\w+-\d+'  # Example: Notif-163189
-    ISSUE_TASK_ID_PATTERN = r'^\[\w+-\d+-\d+\]'  # Example: Notif-163189-16732
+    ISSUE_ID_PATTERN = r'\w+-\d+\s'  # Example: Notif-163189
+    ISSUE_TASK_ID_PATTERN = r'\w+-\d+-\d+'  # Example: Notif-163189-16732
+    ISSUE_TASK_ID_IN_URL_PATTERN = r'^\[\w+-\d+-\d+\]'  # Example: [Notif-163189-16732]
 
     def __init__(self, issue, issue_task, review, logger):
         self.issue = issue
@@ -110,9 +111,10 @@ class Integration:
         if isinstance(review_list, list) and len(review_list) > 0 and 'reviewId' in review_list[0]:
             for review_data in review_list:
                 review_id = review_data['reviewId']['reviewId']
-                issue_title = self.get_issue_title(review_data['title'])
+                issue_title, issue_task_title = self.get_issue_title(review_data['title'])
                 if issue_title is None:
-                    self.log.warning('Failed to get_issue_title from review ' + review_id)
+                    if issue_task_title is None:
+                        self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_data['title'])
                     continue
 
                 issue = self.issue.get_list_by_title(issue_title)
@@ -141,9 +143,13 @@ class Integration:
     def get_issue_title(self, review_title):
         issue_title = re.search(Integration.ISSUE_ID_PATTERN, review_title)
         if issue_title is not None:
-            return issue_title.group()
+            return issue_title.group(), None
         else:
-            return None
+            issue_task_title = re.search(Integration.ISSUE_TASK_ID_PATTERN, review_title)
+            if issue_task_title is not None:
+                return None, issue_task_title.group()
+            else:
+                return None, None
 
     def update_code_review_url_for_issue(self, review_id, issue):
         issue_id = issue[0][self.issue.issue_fields.ID]
@@ -179,7 +185,7 @@ class Integration:
         else:
             split_review_description = re.split('\n', new_review_description)
             for description_line in split_review_description:
-                if re.search(Integration.ISSUE_TASK_ID_PATTERN, description_line) is None:
+                if re.search(Integration.ISSUE_TASK_ID_IN_URL_PATTERN, description_line) is None:
                     break
 
                 else:
