@@ -8,7 +8,7 @@ from requests.auth import HTTPBasicAuth
 
 
 class Integration:
-    ISSUE_ID_PATTERN = r'\w+-\d+'  # Example: Notif-163189
+    ISSUE_ID_PATTERN = r'\w+-\d+\s'  # Example: Notif-163189
     ISSUE_TASK_ID_PATTERN = r'^\[\w+-\d+-\d+\]'  # Example: Notif-163189-16732
 
     def __init__(self, issue, issue_task, review, logger):
@@ -112,7 +112,7 @@ class Integration:
                 review_id = review_data['reviewId']['reviewId']
                 issue_title = self.get_issue_title(review_data['title'])
                 if issue_title is None:
-                    self.log.warning('Failed to get_issue_title from review ' + review_id)
+                    self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_data['title'])
                     continue
 
                 issue = self.issue.get_list_by_title(issue_title)
