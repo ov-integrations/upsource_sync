@@ -111,10 +111,9 @@ class Integration:
         if isinstance(review_list, list) and len(review_list) > 0 and 'reviewId' in review_list[0]:
             for review_data in review_list:
                 review_id = review_data['reviewId']['reviewId']
-                issue_title, issue_task_title = self.get_issue_title(review_data['title'])
+                issue_title = self.get_issue_title(review_data['title'])
                 if issue_title is None:
-                    if issue_task_title is None:
-                        self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_data['title'])
+                    self.contains_issue_task_title(review_data['title'], review_id)
                     continue
 
                 issue = self.issue.get_list_by_title(issue_title)
@@ -143,13 +142,21 @@ class Integration:
     def get_issue_title(self, review_title):
         issue_title = re.search(Integration.ISSUE_ID_PATTERN, review_title)
         if issue_title is not None:
-            return issue_title.group(), None
+            return issue_title.group()
         else:
-            issue_task_title = re.search(Integration.ISSUE_TASK_ID_PATTERN, review_title)
-            if issue_task_title is not None:
-                return None, issue_task_title.group()
-            else:
-                return None, None
+            return None
+
+    def contains_issue_task_title(self, review_title, review_id):
+        issue_task_title = self.get_issue_task_title(review_title)
+        if issue_task_title is None:
+            self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_title)
+
+    def get_issue_task_title(self, review_title):
+        issue_task_title = re.search(Integration.ISSUE_TASK_ID_PATTERN, review_title)
+        if issue_task_title is not None:
+            return issue_task_title.group()
+        else:
+            return None
 
     def update_code_review_url_for_issue(self, review_id, issue):
         issue_id = issue[0][self.issue.issue_fields.ID]
