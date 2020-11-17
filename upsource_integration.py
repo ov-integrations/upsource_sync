@@ -143,20 +143,13 @@ class Integration:
         issue_title = re.search(Integration.ISSUE_ID_PATTERN, review_title)
         if issue_title is not None:
             return issue_title.group()
-        else:
-            return None
 
     def contains_issue_task_title(self, review_title, review_id):
-        issue_task_title = self.get_issue_task_title(review_title)
+        issue_task_title = re.search(Integration.ISSUE_TASK_ID_PATTERN, review_title)
         if issue_task_title is None:
             self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_title)
-
-    def get_issue_task_title(self, review_title):
-        issue_task_title = re.search(Integration.ISSUE_TASK_ID_PATTERN, review_title)
-        if issue_task_title is not None:
-            return issue_task_title.group()
         else:
-            return None
+            self.log.info('The title of the ' + review_id + ' review contains the Issue Task')
 
     def update_code_review_url_for_issue(self, review_id, issue):
         issue_id = issue[0][self.issue.issue_fields.ID]
