@@ -80,7 +80,8 @@ class Integration:
             if isinstance(created_review, list) and len(created_review) > 0 and 'reviewId' in created_review[0]:
                 review_id = created_review[0]['reviewId']['reviewId']
                 self.issue.update_code_review_url(issue_id, self.review.get_review_url(review_id))
-                self.review.rename(review_id, issue_title, issue_summary)
+                review_title = str(issue_title) + ' ' + str(issue_summary)
+                self.review.rename(review_id, review_title)
                 self.set_branch_tracking(issue_title, review_id)
 
                 try:
@@ -111,12 +112,13 @@ class Integration:
         if isinstance(review_list, list) and len(review_list) > 0 and 'reviewId' in review_list[0]:
             for review_data in review_list:
                 review_id = review_data['reviewId']['reviewId']
-                issue_title = self.get_issue_title(review_data['title'])
+                review_title = self.check_non_breaking_space(review_id, review_data['title'])
+                issue_title = self.get_issue_title(review_title)
                 if issue_title is None:
-                    if self.contains_issue_task_title(review_data['title']):
+                    if self.contains_issue_task_title(review_title):
                         self.log.info('The title of the ' + review_id + ' review contains the Issue Task')
                     else:
-                        self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_data['title'])
+                        self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_title)
                     continue
 
                 issue = self.issue.get_list_by_title(issue_title)
@@ -146,6 +148,13 @@ class Integration:
         issue_title = re.search(Integration.ISSUE_ID_PATTERN, review_title)
         if issue_title is not None:
             return issue_title.group()
+
+    def check_non_breaking_space(self, review_id, review_title):
+        if re.search('\xa0', review_title) is not None:
+            review_title = review_title.replace('\xa0', ' ')
+            self.review.rename(review_id, review_title)
+
+        return review_title
 
     def contains_issue_task_title(self, review_title):
         issue_task_title = re.search(Integration.ISSUE_TASK_ID_PATTERN, review_title)
@@ -581,10 +590,10 @@ class Review:
         if answer.ok == False:
             self.log.warning('Failed to delete_default_reviewer. Exception [%s]' % str(answer.text))
 
-    def rename(self, review_id, issue_title, issue_summary):
+    def rename(self, review_id, title):
         url = self.url_upsource + '~rpc/renameReview'
         data = {"reviewId": {"projectId": self.project_upsource, "reviewId": review_id},
-                "text": str(issue_title) + ' ' + str(issue_summary)}
+                "text": title}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
             self.log.warning('Failed to rename_review. Exception [%s]' % str(answer.text))
