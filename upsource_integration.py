@@ -112,13 +112,12 @@ class Integration:
         if isinstance(review_list, list) and len(review_list) > 0 and 'reviewId' in review_list[0]:
             for review_data in review_list:
                 review_id = review_data['reviewId']['reviewId']
-                review_title = self.check_non_breaking_space(review_id, review_data['title'])
-                issue_title = self.get_issue_title(review_title)
+                issue_title = self.get_issue_title(review_id, review_data['title'])
                 if issue_title is None:
-                    if self.contains_issue_task_title(review_title):
+                    if self.contains_issue_task_title(review_data['title']):
                         self.log.info('The title of the ' + review_id + ' review contains the Issue Task')
                     else:
-                        self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_title)
+                        self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_data['title'])
                     continue
 
                 issue = self.issue.get_list_by_title(issue_title)
@@ -144,12 +143,13 @@ class Integration:
                             self.add_reviewers(review_id, issue_tasks)
                             self.update_participant_status_for_review(review_id, issue_title)
 
-    def get_issue_title(self, review_title):
+    def get_issue_title(self, review_id, review_title):
+        review_title = self.replace_non_breaking_space(review_id, review_title)
         issue_title = re.search(Integration.ISSUE_ID_PATTERN, review_title)
         if issue_title is not None:
             return issue_title.group()
 
-    def check_non_breaking_space(self, review_id, review_title):
+    def replace_non_breaking_space(self, review_id, review_title):
         if re.search('\xa0', review_title) is not None:
             review_title = review_title.replace('\xa0', ' ')
             self.review.rename(review_id, review_title)
