@@ -536,7 +536,7 @@ class Review:
             upsource_user = self.find_user_in_upsource(self.user_name_upsource)
         except Exception as e:
             self.log.error('Failed to get_upsource_user_id - ' + self.user_name_upsource + '. Exception [%s]' % str(e))
-            raise SystemExit('Failed to get_upsource_user_id - ' + self.user_name_upsource + '. Exception [%s]' % str(e))
+            raise Exception('Failed to get_upsource_user_id - ' + self.user_name_upsource) from e
 
         if upsource_user is not None and 'infos' in upsource_user:
             return upsource_user['infos'][0]['userId']
