@@ -20,7 +20,7 @@ class Integration:
         self.reviewers = self.get_reviewers()
         self.url_onevizion = issue_task.url_onevizion
         self.issue_task_trackor_type = issue_task.issue_task_trackor_type
-        self.upsource_user_id = self.get_upsource_user_id()
+        self.upsource_user_id = self.review.get_upsource_user_id()
 
     def start_integration(self):
         self.log.info('Starting integration')
@@ -40,23 +40,13 @@ class Integration:
 
         self.log.info('Integration has been completed')
 
-    def get_upsource_user_id(self):
-        try:
-            upsource_user = self.review.find_user_in_upsource(self.review.user_name_upsource)
-        except Exception as e:
-            self.log.warning('Failed to find_user_in_upsource. Exception [%s]' % str(e))
-            upsource_user = None
-
-        if upsource_user is not None and 'infos' in upsource_user:
-            return upsource_user['infos'][0]['userId']
-
     def get_reviewers(self):
         reviewers_list = []
         for reviewer in self.review.reviewers:
             try:
                 upsource_user = self.review.find_user_in_upsource(reviewer['name'])
             except Exception as e:
-                self.log.warning('Failed to find_user_in_upsource. Exception [%s]' % str(e))
+                self.log.warning('Failed to find_user_in_upsource - ' + reviewer['name'] + '. Exception [%s]' % str(e))
                 upsource_user = None
 
             if upsource_user is not None and 'infos' in upsource_user:
@@ -533,9 +523,23 @@ class Review:
         data = {'projectId': self.project_upsource, 'pattern': reviewer_name, 'limit': Review.LIMIT}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
-            return answer.json()['result']
+            result = answer.json()['result']
+            if len(result) > 0:
+                return result
+            else:
+                raise Exception(answer.text)
         else:
             raise Exception(answer.text)
+
+    def get_upsource_user_id(self):
+        try:
+            upsource_user = self.find_user_in_upsource(self.user_name_upsource)
+        except Exception as e:
+            self.log.error('Failed to get_upsource_user_id - ' + self.user_name_upsource + '. Exception [%s]' % str(e))
+            raise SystemExit('Failed to get_upsource_user_id - ' + self.user_name_upsource + '. Exception [%s]' % str(e))
+
+        if upsource_user is not None and 'infos' in upsource_user:
+            return upsource_user['infos'][0]['userId']
 
     def update_participant_status(self, state, reviewer_id, review_id):
         url = self.url_upsource + '~rpc/updateParticipantInReview'
