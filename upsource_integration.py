@@ -20,6 +20,7 @@ class Integration:
         self.reviewers = self.get_reviewers()
         self.url_onevizion = issue_task.url_onevizion
         self.issue_task_trackor_type = issue_task.issue_task_trackor_type
+        self.upsource_user_id = self.get_upsource_user_id()
 
     def start_integration(self):
         self.log.info('Starting integration')
@@ -38,6 +39,16 @@ class Integration:
         self.check_open_reviews()
 
         self.log.info('Integration has been completed')
+
+    def get_upsource_user_id(self):
+        try:
+            upsource_user = self.review.find_user_in_upsource(self.review.user_name_upsource)
+        except Exception as e:
+            self.log.warning('Failed to find_user_in_upsource. Exception [%s]' % str(e))
+            upsource_user = None
+
+        if upsource_user is not None and 'infos' in upsource_user:
+            return upsource_user['infos'][0]['userId']
 
     def get_reviewers(self):
         reviewers_list = []
@@ -83,16 +94,8 @@ class Integration:
                 review_title = str(issue_title) + ' ' + str(issue_summary)
                 self.review.rename(review_id, review_title)
                 self.set_branch_tracking(issue_title, review_id)
-
-                try:
-                    upsource_user = self.review.find_user_in_upsource(self.review.user_name_upsource)
-                except Exception as e:
-                    self.log.warning('Failed to find_user_in_upsource. Exception [%s]' % str(e))
-                    upsource_user = None
-
-                if upsource_user is not None:
-                    self.review.delete_default_reviewer(upsource_user['infos'][0]['userId'], review_id,
-                                                        ParticipantRole.REVIEWER.value)
+                if self.upsource_user_id is not None:
+                    self.review.delete_default_reviewer(self.upsource_user_id, review_id, ParticipantRole.REVIEWER.value)
 
                 self.log.info('Review for ' + str(issue_title) + ' created')
 
@@ -111,13 +114,13 @@ class Integration:
         review_list = self.review.get_list_on_query('state: open')
         if isinstance(review_list, list) and len(review_list) > 0 and 'reviewId' in review_list[0]:
             for review_data in review_list:
+                if review_data['createdBy'] != self.upsource_user_id:
+                    continue
+
                 review_id = review_data['reviewId']['reviewId']
                 issue_title = self.get_issue_title(review_id, review_data['title'])
                 if issue_title is None:
-                    if self.contains_issue_task_title(review_data['title']):
-                        self.log.info('The title of the ' + review_id + ' review contains the Issue Task')
-                    else:
-                        self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_data['title'])
+                    self.log.warning('Failed to get_issue_title from review ' + review_id + ' ' + review_data['title'])
                     continue
 
                 issue = self.issue.get_list_by_title(issue_title)
@@ -155,13 +158,6 @@ class Integration:
             self.review.rename(review_id, review_title)
 
         return review_title
-
-    def contains_issue_task_title(self, review_title):
-        issue_task_title = re.search(Integration.ISSUE_TASK_ID_PATTERN, review_title)
-        if issue_task_title is None:
-            return False
-        else:
-            return True
 
     def update_code_review_url_for_issue(self, review_id, issue):
         issue_id = issue[0][self.issue.issue_fields.ID]
