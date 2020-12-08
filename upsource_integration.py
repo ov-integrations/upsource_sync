@@ -540,6 +540,8 @@ class Review:
 
         if upsource_user is not None and 'infos' in upsource_user:
             return upsource_user['infos'][0]['userId']
+        else:
+            raise Exception('Failed to get_upsource_user_id - ' + self.user_name_upsource)
 
     def update_participant_status(self, state, reviewer_id, review_id):
         url = self.url_upsource + '~rpc/updateParticipantInReview'
