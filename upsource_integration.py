@@ -253,9 +253,9 @@ class Integration:
                         for issue_task in issue_tasks:
                             issue_task_code_reviewer = str(issue_task[self.issue_task.issue_task_fields.REVIEWER])
                             issue_task_status = issue_task[self.issue_task.issue_task_fields.STATUS]
-                            if reviewer_ov_name in issue_task_code_reviewer:
-                                if issue_task_status != self.issue_task.issue_task_statuses.CANCELED:
-                                    is_reviewer_deleted = False
+                            if reviewer_ov_name in issue_task_code_reviewer \
+                                    and issue_task_status != self.issue_task.issue_task_statuses.CANCELED:
+                                is_reviewer_deleted = False
                                 break
 
                         if is_reviewer_deleted:
