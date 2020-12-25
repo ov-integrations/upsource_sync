@@ -2,7 +2,6 @@
     "urlOneVizion": "url",
     "loginOneVizion": "login",
     "passOneVizion": "password",
-    "productOneVizion": "product name",
     "issueTrackorType": "Issue trackor type",
     "issueTaskTrackorType": "Issue Task trackor type",
 
@@ -10,7 +9,18 @@
     "userNameUpsource": "Full Name",
     "loginUpsource": "login",
     "passUpsource": "password",
-    "projectUpsource": "project name",
+
+    "products": [
+        {
+            "projectUpsource": "Upsource Project1",
+            "productOneVizion": "OV Product1"
+        },
+        {
+            "projectUpsource": "Upsource Project2",
+            "productOneVizion": "OV Product2"
+        }
+    ],
+
     "reviewers": [
         {
             "name": "Upsource Full Name1",
@@ -28,7 +38,7 @@
         "closed": "Closed",
         "completed": "Completed",
         "canceled": "Canceled",
-        "readyForReview": "Ready for Review"
+        "readyForReview": "Code Review"
     },
     "issueFields": {
         "id": "TRACKOR_ID",

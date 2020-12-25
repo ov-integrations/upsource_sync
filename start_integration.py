@@ -18,13 +18,12 @@ url_upsource = password_data["urlUpsource"]
 user_name_upsource = password_data["userNameUpsource"]
 login_upsource = password_data["loginUpsource"]
 pass_upsource = password_data["passUpsource"]
-project_upsource = password_data["projectUpsource"]
+products = password_data["products"]
 reviewers = password_data["reviewers"]
 
 url_onevizion = re.sub("^https://", "", password_data["urlOneVizion"][:-1])
 login_onevizion = password_data["loginOneVizion"]
 pass_onevizion = password_data["passOneVizion"]
-product_onevizion = password_data["productOneVizion"]
 issue_trackor_type = password_data["issueTrackorType"]
 issue_task_trackor_type = password_data["issueTaskTrackorType"]
 
@@ -35,12 +34,12 @@ issue_task_types = password_data["issueTaskTypes"]
 issue_task_statuses = password_data["issueTaskStatuses"]
 
 logger = build_logger()
-issue = Issue(url_onevizion, login_onevizion, pass_onevizion, product_onevizion, issue_trackor_type, issue_statuses,
-              issue_fields)
+issue = Issue(url_onevizion, login_onevizion, pass_onevizion,
+              issue_trackor_type, issue_statuses, issue_fields)
 issue_task = IssueTask(url_onevizion, login_onevizion, pass_onevizion, issue_trackor_type, issue_task_trackor_type,
                        issue_fields, issue_task_fields, issue_task_types, issue_task_statuses)
-review = Review(url_upsource, user_name_upsource, login_upsource, pass_upsource, project_upsource, reviewers,
-                logger)
-integration = Integration(issue, issue_task, review, logger)
+review = Review(url_upsource, user_name_upsource,
+                login_upsource, pass_upsource, reviewers, logger)
+integration = Integration(products, issue, issue_task, review, logger)
 
 integration.start_integration()

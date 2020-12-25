@@ -9,7 +9,8 @@ Requirements
 - python onevizion library (pip install onevizion)
 
 Features
-- creates new code reviews for "Ready for Review" Issues
+- support multiple products
+- creates new code reviews for "Code Review" Issues
 - assigns reviewer based on Issue Task
 - adds statuses Accepted\Raise Concern to reviewer based on Issue Task
 

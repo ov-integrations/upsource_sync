@@ -13,10 +13,6 @@
             "type": "string",
             "minLength": 1
         },
-        "productOneVizion": {
-            "type": "string",
-            "minLength": 1
-        },
         "issueTrackorType": {
             "type": "string",
             "minLength": 1
@@ -41,9 +37,23 @@
             "type": "string",
             "minLength": 1
         },
-        "projectUpsource": {
-            "type": "string",
-            "minLength": 1
+        "products": {
+            "type": "array",
+            "items": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "productOneVizion": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "projectUpsource": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    }
+                }
+            ]
         },
         "reviewers": {
             "type": "array",
