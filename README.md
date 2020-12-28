@@ -9,7 +9,7 @@ Requirements
 - python onevizion library (pip install onevizion)
 
 Features
-- support multiple products
+- supports multiple products
 - creates new code reviews for "Code Review" Issues
 - assigns reviewer based on Issue Task
 - adds statuses Accepted\Raise Concern to reviewer based on Issue Task
