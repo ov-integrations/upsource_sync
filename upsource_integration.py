@@ -42,8 +42,7 @@ class Integration:
         for reviewer in self.review.reviewers:
             try:
                 upsource_user = self.review.find_user_in_upsource(reviewer['name'], project_upsource)
-            except Exception as e:
-                self.log.warning('Failed to find_user_in_upsource - ' + reviewer['name'] + '. Exception [%s]' % str(e))
+            except Exception:
                 upsource_user = None
 
             if upsource_user is not None and 'infos' in upsource_user:
@@ -324,7 +323,7 @@ class Integration:
                                                          self.issue_task.issue_task_statuses.CONCERN_RAISED):
                                     if participant_state != ParticipantState.REJECTED.value \
                                             and issue_task_status != self.issue_task.issue_task_statuses.CONCERN_RAISED:
-                                        self.review.update_participant_status(ParticipantState.REJECTED.value,
+                                        self.review.update_participant_status(reviewer_ov_name, ParticipantState.REJECTED.value,
                                                                               reviewer_id, review_id, project_upsource)
                                         self.issue_task.update_concern_raised(issue_task[self.issue_task.issue_task_fields.ID])
                                     is_rejected = True
@@ -339,11 +338,11 @@ class Integration:
                                                                                                         reviewer_ov_name,
                                                                                                         self.issue_task.issue_task_statuses.IN_PROGRESS)
                                 if len(issue_tasks_in_progress) == 0:
-                                    self.review.update_participant_status(ParticipantState.ACCEPTED.value, reviewer_id,
+                                    self.review.update_participant_status(reviewer_ov_name, ParticipantState.ACCEPTED.value, reviewer_id,
                                                                           review_id, project_upsource)
 
                             if is_rejected is False and is_accepted is False and participant_state != ParticipantState.READ.value:
-                                self.review.update_participant_status(ParticipantState.READ.value, reviewer_id,
+                                self.review.update_participant_status(reviewer_ov_name, ParticipantState.READ.value, reviewer_id,
                                                                       review_id, project_upsource)
 
                         break
@@ -556,13 +555,13 @@ class Review:
         else:
             raise Exception('Failed to get_upsource_user_id - ' + self.user_name_upsource)
 
-    def update_participant_status(self, state, reviewer_id, review_id, project_upsource):
+    def update_participant_status(self, reviewer_ov_name, state, reviewer_id, review_id, project_upsource):
         url = self.url_upsource + '~rpc/updateParticipantInReview'
         data = {"reviewId": {"projectId": project_upsource, "reviewId": review_id}, "state": state,
                 "userId": reviewer_id}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok == False:
-            self.log.warning('Failed to update_participant_status. Exception [%s]' % str(answer.text))
+            self.log.warning('Failed to update_participant_status for reviewer ' + str(reviewer_ov_name) + ' to ' + str(review_id) + ' review. Exception [%s]' % str(answer.text))
 
     def add_reviewer(self, reviewer_id, reviewer_ov_name, review_id, project_upsource):
         url = self.url_upsource + '~rpc/addParticipantToReview'
@@ -572,7 +571,7 @@ class Review:
         if answer.ok:
             self.log.info('Reviewer ' + str(reviewer_ov_name) + ' was added to ' + str(review_id) + ' review')
         else:
-            self.log.warning('Failed to add_reviewer. Exception [%s]' % str(answer.text))
+            self.log.warning('Failed to add reviewer ' + str(reviewer_ov_name) + ' to ' + str(review_id) + ' review. Exception [%s]' % str(answer.text))
 
     def remove_reviewer(self, reviewer_id, reviewer_ov_name, review_id, project_upsource):
         url = self.url_upsource + '~rpc/removeParticipantFromReview'
@@ -582,7 +581,7 @@ class Review:
         if answer.ok:
             self.log.info('Reviewer ' + str(reviewer_ov_name) + ' removed from ' + str(review_id) + ' review')
         else:
-            self.log.warning('Failed to remove_reviewer. Exception [%s]' % str(answer.text))
+            self.log.warning('Failed to remove reviewer ' + str(reviewer_ov_name) + ' to ' + str(review_id) + ' review. Exception [%s]' % str(answer.text))
 
     def get_list_on_query(self, query, project_upsource):
         url = self.url_upsource + '~rpc/getReviews'
