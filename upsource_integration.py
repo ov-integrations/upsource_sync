@@ -12,13 +12,13 @@ class Integration:
     ISSUE_TASK_ID_PATTERN = r'\w+-\d+-\d+'  # Example: Notif-163189-16732
     ISSUE_TASK_ID_IN_URL_PATTERN = r'^\[\w+-\d+-\d+\]'  # Example: [Notif-163189-16732]
 
-    def __init__(self, products, issue, issue_task, review, logger):
+    def __init__(self, url_onevizion, products, issue, issue_task, review, logger):
         self.products = products
         self.issue = issue
         self.issue_task = issue_task
         self.review = review
         self.log = logger
-        self.url_onevizion = issue_task.url_onevizion
+        self.url_onevizion = url_onevizion
         self.issue_task_trackor_type = issue_task.issue_task_trackor_type
 
     def start_integration(self):
@@ -338,10 +338,6 @@ class Issue:
                  issue_statuses, issue_fields):
         self.issue_statuses = IssueStatuses(issue_statuses)
         self.issue_fields = IssueFields(issue_fields)
-        if re.search('https', url_onevizion) is None:
-            url_onevizion=re.sub("^http://", "", url_onevizion[:-1])
-        else:
-            url_onevizion=re.sub("^https://", "", url_onevizion[:-1])
         self.issue_service = onevizion.Trackor(trackorType=issue_trackor_type, URL=url_onevizion,
                                                userName=login_onevizion, password=pass_onevizion)
 
@@ -378,11 +374,6 @@ class IssueTask:
         self.issue_task_statuses = IssueTaskStatuses(issue_task_statuses)
         self.issue_trackor_type = issue_trackor_type
         self.issue_task_trackor_type = issue_task_trackor_type
-        self.url_onevizion = url_onevizion
-        if re.search('https', url_onevizion) is None:
-            url_onevizion=re.sub("^http://", "", url_onevizion[:-1])
-        else:
-            url_onevizion=re.sub("^https://", "", url_onevizion[:-1])
         self.issue_task_service = onevizion.Trackor(trackorType=issue_task_trackor_type, URL=url_onevizion,
                                                     userName=login_onevizion, password=pass_onevizion)
 
