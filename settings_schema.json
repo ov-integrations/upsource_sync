@@ -3,7 +3,7 @@
     "properties": {
         "urlOneVizion": {
             "type": "string",
-            "pattern": "^https://.*"
+            "pattern": "^http://.*|^https://.*"
         },
         "loginOneVizion": {
             "type": "string",
@@ -23,7 +23,7 @@
         },
         "urlUpsource": {
             "type": "string",
-            "pattern": "^https://.*"
+            "pattern": "^http://.*|^https://.*"
         },
         "userNameUpsource": {
             "type": "string",

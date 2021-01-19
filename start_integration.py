@@ -21,7 +21,7 @@ pass_upsource = password_data["passUpsource"]
 products = password_data["products"]
 reviewers = password_data["reviewers"]
 
-url_onevizion = re.sub("^https://", "", password_data["urlOneVizion"][:-1])
+url_onevizion = password_data["urlOneVizion"]
 login_onevizion = password_data["loginOneVizion"]
 pass_onevizion = password_data["passOneVizion"]
 issue_trackor_type = password_data["issueTrackorType"]

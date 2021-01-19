@@ -178,7 +178,7 @@ class Integration:
                 self.issue_task.update_code_review_url(issue_task_id, self.review.get_review_url(review_id, project_upsource))
 
     def add_task_urls_to_description(self, review_data, review_id, issue_tasks, project_upsource):
-        issue_task_url = f'https://{self.url_onevizion}/trackor_types/{self.issue_task_trackor_type}/trackors.do?key='
+        issue_task_url = f'{self.url_onevizion}/trackor_types/{self.issue_task_trackor_type}/trackors.do?key='
 
         review_description = ''
         if 'description' in review_data:
@@ -338,6 +338,10 @@ class Issue:
                  issue_statuses, issue_fields):
         self.issue_statuses = IssueStatuses(issue_statuses)
         self.issue_fields = IssueFields(issue_fields)
+        if re.search('https', url_onevizion) is None:
+            url_onevizion=re.sub("^http://", "", url_onevizion[:-1])
+        else:
+            url_onevizion=re.sub("^https://", "", url_onevizion[:-1])
         self.issue_service = onevizion.Trackor(trackorType=issue_trackor_type, URL=url_onevizion,
                                                userName=login_onevizion, password=pass_onevizion)
 
@@ -375,6 +379,10 @@ class IssueTask:
         self.issue_trackor_type = issue_trackor_type
         self.issue_task_trackor_type = issue_task_trackor_type
         self.url_onevizion = url_onevizion
+        if re.search('https', url_onevizion) is None:
+            url_onevizion=re.sub("^http://", "", url_onevizion[:-1])
+        else:
+            url_onevizion=re.sub("^https://", "", url_onevizion[:-1])
         self.issue_task_service = onevizion.Trackor(trackorType=issue_task_trackor_type, URL=url_onevizion,
                                                     userName=login_onevizion, password=pass_onevizion)
 
