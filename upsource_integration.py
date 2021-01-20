@@ -178,7 +178,7 @@ class Integration:
                 self.issue_task.update_code_review_url(issue_task_id, self.review.get_review_url(review_id, project_upsource))
 
     def add_task_urls_to_description(self, review_data, review_id, issue_tasks, project_upsource):
-        issue_task_url = f'{self.url_onevizion}/trackor_types/{self.issue_task_trackor_type}/trackors.do?key='
+        issue_task_url = f'{self.url_onevizion}trackor_types/{self.issue_task_trackor_type}/trackors.do?key='
 
         review_description = ''
         if 'description' in review_data:
