@@ -129,6 +129,15 @@ class Integration:
 
                 issue = self.issue.get_list_by_title(issue_title)
                 if len(issue) > 0:
+                    self.update_code_review_url_for_issue(review_id, issue, project_upsource)
+                    issue_tasks = self.issue_task.find_issue_tasks(issue_title)
+                    if len(issue_tasks) > 0:
+                        self.update_code_review_url_for_issue_tasks(review_id, issue_tasks, project_upsource)
+                        self.add_task_urls_to_description(review_data, review_id, issue_tasks, project_upsource)
+                        self.remove_reviewers(review_data, review_id, issue_tasks, project_upsource)
+                        self.add_reviewers(review_id, issue_tasks, project_upsource)
+                        self.update_participant_status_for_review(review_id, issue_title, project_upsource)
+
                     issue_status = issue[0][self.issue.issue_fields.STATUS]
                     if issue_status in self.issue.issue_statuses.get_statuses_after_review():
                         try:
@@ -139,16 +148,6 @@ class Integration:
 
                         if closed_review is not None:
                             self.log.debug(f'Review {str(review_id)} closed for Issue {issue_title}')
-
-                    else:
-                        self.update_code_review_url_for_issue(review_id, issue, project_upsource)
-                        issue_tasks = self.issue_task.find_issue_tasks(issue_title)
-                        if len(issue_tasks) > 0:
-                            self.update_code_review_url_for_issue_tasks(review_id, issue_tasks, project_upsource)
-                            self.add_task_urls_to_description(review_data, review_id, issue_tasks, project_upsource)
-                            self.remove_reviewers(review_data, review_id, issue_tasks, project_upsource)
-                            self.add_reviewers(review_id, issue_tasks, project_upsource)
-                            self.update_participant_status_for_review(review_id, issue_title, project_upsource)
 
     def get_issue_title(self, review_id, review_title, project_upsource):
         review_title = self.replace_non_breaking_space(review_id, review_title, project_upsource)
