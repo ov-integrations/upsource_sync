@@ -90,18 +90,16 @@ class Integration:
     def create_review(self, revision_id, issue_id, issue_title, issue_summary, project_upsource):
         self.log.info(f'Creating a review for {str(issue_title)} Issue')
         review = self.review.create(revision_id, project_upsource)
-        if review is not None:
-            created_review = self.review.get_list_on_query(issue_title, project_upsource)
-            if isinstance(created_review, list) and len(created_review) > 0 and 'reviewId' in created_review[0]:
-                review_id = created_review[0]['reviewId']['reviewId']
-                self.issue.update_code_review_url(issue_id, self.review.get_review_url(review_id, project_upsource))
-                review_title = f'{str(issue_title)} {str(issue_summary)}'
-                self.review.rename(review_id, review_title, project_upsource)
-                self.set_branch_tracking(issue_title, review_id, project_upsource)
-                if self.upsource_user_id is not None:
-                    self.review.delete_default_reviewer(self.upsource_user_id, review_id, ParticipantRole.REVIEWER.value, project_upsource)
+        if len(review) > 0 and 'reviewId' in review:
+            review_id = review['reviewId']['reviewId']
+            self.issue.update_code_review_url(issue_id, self.review.get_review_url(review_id, project_upsource))
+            review_title = f'{str(issue_title)} {str(issue_summary)}'
+            self.review.rename(review_id, review_title, project_upsource)
+            self.set_branch_tracking(issue_title, review_id, project_upsource)
+            if self.upsource_user_id is not None:
+                self.review.delete_default_reviewer(self.upsource_user_id, review_id, ParticipantRole.REVIEWER.value, project_upsource)
 
-                self.log.info(f'Review for {str(issue_title)} created')
+            self.log.info(f'Review for {str(issue_title)} created')
 
     def set_branch_tracking(self, issue_title, review_id, project_upsource):
         try:
@@ -602,7 +600,7 @@ class Review:
         data = {"projectId": project_upsource, "revisions": revision_id}
         answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
         if answer.ok:
-            return answer
+            return answer.json()['result']
         else:
             self.log.warning(f'Failed to create_review. Exception [{str(answer.text)}]')
             return None
