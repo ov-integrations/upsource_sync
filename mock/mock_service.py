@@ -1,6 +1,4 @@
-from re import A
 from flask import Flask, request, make_response
-from flask_wtf import CSRFProtect
 from functools import wraps
 from enum import Enum
 
@@ -8,8 +6,6 @@ import json
 
 
 app = Flask(__name__)
-csrf = CSRFProtect()
-csrf.init_app(app)
 
 def auth_required(f):
     @wraps(f) 
@@ -27,13 +23,11 @@ def auth_required(f):
     return decorated
 
 @app.route('/')
-@csrf.exempt
 @auth_required
 def main():
     return 'You are logged in'
 
 @app.route('/~rpc/getRevisionsListFiltered',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def get_filtered_revision_list():
     query = request.get_json()['query']
@@ -53,7 +47,6 @@ def get_filtered_revision_list():
     return json_data
 
 @app.route('/~rpc/closeReview',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def close_review():
     review_id = request.get_json()['reviewId']['reviewId']
@@ -64,7 +57,6 @@ def close_review():
     return review_id
 
 @app.route('/~rpc/getBranches',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def get_branch():
     query = request.get_json()['query']
@@ -79,7 +71,6 @@ def get_branch():
     return json_data
 
 @app.route('/~rpc/startBranchTracking',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def start_branch_tracking():
     review_id = request.get_json()['reviewId']['reviewId']
@@ -90,7 +81,6 @@ def start_branch_tracking():
     return review_id
 
 @app.route('/~rpc/findUsers',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def find_users():
     pattern = request.get_json()['pattern']
@@ -107,7 +97,6 @@ def find_users():
     return json_data
 
 @app.route('/~rpc/updateParticipantInReview',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def update_participant_status():
     review_id = request.get_json()['reviewId']['reviewId']
@@ -122,7 +111,6 @@ def update_participant_status():
     return user_id
 
 @app.route('/~rpc/addParticipantToReview',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def add_reviewer():
     review_id = request.get_json()['reviewId']['reviewId']
@@ -137,7 +125,6 @@ def add_reviewer():
     return user_id
 
 @app.route('/~rpc/removeParticipantFromReview',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def remove_reviewer():
     review_id = request.get_json()['reviewId']['reviewId']
@@ -152,7 +139,6 @@ def remove_reviewer():
     return user_id
 
 @app.route('/~rpc/getReviews',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def get_reviews():
     query = request.get_json()['query']
@@ -203,7 +189,6 @@ def get_reviews():
     return json_data
 
 @app.route('/~rpc/renameReview',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def rename_review():
     review_id = request.get_json()['reviewId']['reviewId']
@@ -214,7 +199,6 @@ def rename_review():
     return review_id
 
 @app.route('/~rpc/createReview',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def create_review():
     revisions = request.get_json()['revisions']
@@ -235,7 +219,6 @@ def create_review():
     return json_data
 
 @app.route('/~rpc/editReviewDescription',  methods=['POST'])
-@csrf.exempt
 @auth_required
 def update_review_description():
     review_id = request.get_json()['reviewId']['reviewId']
