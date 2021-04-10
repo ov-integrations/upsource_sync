@@ -141,48 +141,39 @@ def remove_reviewer():
 @app.route('/~rpc/getReviews',  methods=['POST'])
 @auth_required
 def get_reviews():
+    with open('settings.json', 'rb') as PFile:
+        settings_url = json.loads(PFile.read().decode('utf-8'))['urlOneVizion']
+
+    REVIEW_JSON_DATA_1 = {'reviewId':{'projectId':'blank','reviewId':Review.SUMMARY_TEST_1.value},
+                          'title':f'{Issue.ID_TEST_1.value} {Issue.SUMMARY_TEST_1.value}',
+                          'description':f'[{Issue.ID_TEST_1.value}-64]({settings_url}trackor_types/Issue_Task/trackors.do?key={Issue.ID_TEST_1.value}-64) amoiseenko\n \
+                                          [{Issue.ID_TEST_1.value}-62]({settings_url}trackor_types/Issue_Task/trackors.do?key={Issue.ID_TEST_1.value}-62) vadim.glebov',
+                          'participants':[{'userId':User.ID_TEST_3.value,'role':2,'state':2},
+                                          {'userId':User.ID_TEST_1.value,'role':2,'state':2},
+                                          {'userId':User.ID_TEST_2.value,'role':2,'state':2},
+                                          {'userId':User.ID_TEST_4.value,'role':1,'state':2}],
+                          'state':1,'createdBy':User.ID_TEST_3.value}
+    REVIEW_JSON_DATA_2 = {'reviewId':{'projectId':'blank','reviewId':Review.SUMMARY_TEST_2.value},
+                          'title':f'{Issue.ID_TEST_2.value} {Issue.SUMMARY_TEST_2.value}',
+                          'participants':[{'userId':User.ID_TEST_1.value,'role':1,'state':1}],
+                          'state':1,'createdBy':User.ID_TEST_3.value}
+  
+
     query = request.get_json()['query']
 
     if query not in (Issue.ID_TEST_2.value, Issue.ID_TEST_1.value, Review.SUMMARY_TEST_1.value, Review.SUMMARY_TEST_2.value, 'state: open'):
         return make_response(f'Review for {query} not found', StatusCode.EXCEPTION.value)
 
-    with open('settings.json', 'rb') as PFile:
-        settings_url = json.loads(PFile.read().decode('utf-8'))['urlOneVizion']
 
     if query == Issue.ID_TEST_2.value:
         json_data = {'result': {'hasMore': False, 'totalCount': 0}}
     elif query == Review.SUMMARY_TEST_2.value:
-        json_data = {'result':{'reviews':[{
-                'reviewId':{'projectId':'blank','reviewId':Review.SUMMARY_TEST_2.value},
-                'title':f'{Issue.ID_TEST_2.value} {Issue.SUMMARY_TEST_2.value}',
-                'participants':[{'userId':User.ID_TEST_1.value,'role':1,'state':1}],
-                'state':1,'createdBy':User.ID_TEST_3.value}]}}
+        json_data = {'result':{'reviews':[REVIEW_JSON_DATA_2]}}
     elif query == Issue.ID_TEST_1.value or query == Review.SUMMARY_TEST_1.value:
-        json_data = {'result':{'reviews':[{
-                'reviewId':{'projectId':'blank','reviewId':Review.SUMMARY_TEST_1.value},
-                'title':f'{Issue.ID_TEST_1.value} {Issue.SUMMARY_TEST_1.value}',
-                'description':f'[{Issue.ID_TEST_1.value}-64]({settings_url}trackor_types/Issue_Task/trackors.do?key={Issue.ID_TEST_1.value}-64) amoiseenko\n \
-                               [{Issue.ID_TEST_1.value}-62]({settings_url}trackor_types/Issue_Task/trackors.do?key={Issue.ID_TEST_1.value}-62) vadim.glebov',
-                'participants':[{'userId':User.ID_TEST_3.value,'role':2,'state':2},
-                                {'userId':User.ID_TEST_1.value,'role':2,'state':2},
-                                {'userId':User.ID_TEST_2.value,'role':2,'state':2},
-                                {'userId':User.ID_TEST_4.value,'role':1,'state':2}],
-                'state':1,'createdBy':User.ID_TEST_3.value}]}}
+        json_data = {'result':{'reviews':[REVIEW_JSON_DATA_1]}}
     elif query == 'state: open':
-        json_data = {'result':{'reviews':[{
-                'reviewId':{'projectId':'blank','reviewId':Review.SUMMARY_TEST_1.value},
-                'title':f'{Issue.ID_TEST_1.value} {Issue.SUMMARY_TEST_1.value}',
-                'description':f'[{Issue.ID_TEST_1.value}-64]({settings_url}trackor_types/Issue_Task/trackors.do?key={Issue.ID_TEST_1.value}-64) amoiseenko\n \
-                               [{Issue.ID_TEST_1.value}-62]({settings_url}trackor_types/Issue_Task/trackors.do?key={Issue.ID_TEST_1.value}-62) vadim.glebov',
-                'participants':[{'userId':User.ID_TEST_3.value,'role':2,'state':2},
-                                {'userId':User.ID_TEST_1.value,'role':2,'state':2},
-                                {'userId':User.ID_TEST_2.value,'role':2,'state':2},
-                                {'userId':User.ID_TEST_4.value,'role':1,'state':2}],
-                'state':1,'createdBy':User.ID_TEST_3.value},
-                {'reviewId':{'projectId':'blank','reviewId':Review.SUMMARY_TEST_2.value},
-                'title':f'{Issue.ID_TEST_2.value} {Issue.SUMMARY_TEST_2.value}',
-                'participants':[{'userId':User.ID_TEST_1.value,'role':1,'state':1}],
-                'state':1,'createdBy':User.ID_TEST_3.value}]}}
+        json_data = {'result':{'reviews':[REVIEW_JSON_DATA_1, REVIEW_JSON_DATA_2]}}
+        print(json_data)
     else:
         json_data = {'result': {'hasMore': False, 'totalCount': 0}}
 
