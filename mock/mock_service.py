@@ -1,4 +1,5 @@
 from flask import Flask, request, make_response
+from flask_wtf.csrf import CSRFProtect
 from functools import wraps
 from enum import Enum
 
@@ -6,6 +7,9 @@ import json
 
 
 app = Flask(__name__)
+
+csrf = CSRFProtect(app)
+app.config['WTF_CSRF_ENABLED'] = False
 
 def auth_required(f):
     @wraps(f) 
