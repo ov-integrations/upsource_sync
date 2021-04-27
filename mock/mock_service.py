@@ -1,6 +1,6 @@
 from flask import Flask, request, make_response
 from functools import wraps
-from test_constants import *
+from constants import *
 import json
 
 
@@ -144,11 +144,11 @@ def get_reviews():
     if query == Issue.IHUB_146144.issue_id:
         json_data = {'result': {'hasMore': False, 'totalCount': 0}}
     elif query == Review.BLNK_CR_128.review_key:
-        json_data = {'result':{'reviews':[REVIEW_JSON_DATA_2]}}
+        json_data = {'result':{'reviews':[BLNK_CR_128_REVIEW_JSON_DATA]}}
     elif query in (Issue.DEPL_125306.issue_id, Review.BLNK_CR_127.review_key):
-        json_data = {'result':{'reviews':[REVIEW_JSON_DATA_1]}}
+        json_data = {'result':{'reviews':[BLNK_CR_127_REVIEW_JSON_DATA]}}
     elif query == 'state: open':
-        json_data = {'result':{'reviews':[REVIEW_JSON_DATA_1, REVIEW_JSON_DATA_2]}}
+        json_data = {'result':{'reviews':[BLNK_CR_127_REVIEW_JSON_DATA, BLNK_CR_128_REVIEW_JSON_DATA]}}
     else:
         json_data = {'result': {'hasMore': False, 'totalCount': 0}}
 
@@ -170,7 +170,7 @@ def create_review():
     revisions = request.get_json()['revisions']
 
     if revisions == Review.BLNK_CR_128.review_id:
-        json_data = {'result':{'reviews':[REVIEW_JSON_DATA_2]}}
+        json_data = {'result':{'reviews':[BLNK_CR_128_REVIEW_JSON_DATA]}}
     elif revisions == Review.BLNK_CR_127.review_id:
         return make_response(f'Cannot create review because revision {revisions} is already in review Review(reviewId=ReviewId[{Review.BLNK_CR_127.review_id}], \
                                 title=\'{Issue.DEPL_125306.issue_id} {Issue.DEPL_125306.summary}\'', StatusCode.EXCEPTION.value)
