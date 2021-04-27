@@ -2,6 +2,7 @@ from flask import Flask, request, make_response
 from functools import wraps
 from constants import *
 import json
+import re
 
 
 app = Flask(__name__)
@@ -140,15 +141,19 @@ def get_reviews():
     if query not in (Issue.IHUB_146144.issue_id, Issue.DEPL_125306.issue_id, Review.BLNK_CR_127.review_key, Review.BLNK_CR_128.review_key, 'state: open'):
         return make_response(f'Review for {query} not found', StatusCode.EXCEPTION.value)
 
+    with open('settings.json', 'rb') as PFile:
+        settings_url = json.loads(PFile.read().decode('utf-8'))['urlOneVizion']
+    blnk_cr_127_review_json_data = json.loads(re.sub('settings_url/', settings_url, json.dumps(BLNK_CR_127_REVIEW_JSON_DATA)))
+    
 
     if query == Issue.IHUB_146144.issue_id:
         json_data = {'result': {'hasMore': False, 'totalCount': 0}}
     elif query == Review.BLNK_CR_128.review_key:
         json_data = {'result':{'reviews':[BLNK_CR_128_REVIEW_JSON_DATA]}}
     elif query in (Issue.DEPL_125306.issue_id, Review.BLNK_CR_127.review_key):
-        json_data = {'result':{'reviews':[BLNK_CR_127_REVIEW_JSON_DATA]}}
+        json_data = {'result':{'reviews':[blnk_cr_127_review_json_data]}}
     elif query == 'state: open':
-        json_data = {'result':{'reviews':[BLNK_CR_127_REVIEW_JSON_DATA, BLNK_CR_128_REVIEW_JSON_DATA]}}
+        json_data = {'result':{'reviews':[blnk_cr_127_review_json_data, BLNK_CR_128_REVIEW_JSON_DATA]}}
     else:
         json_data = {'result': {'hasMore': False, 'totalCount': 0}}
 

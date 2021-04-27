@@ -38,13 +38,10 @@ class User(Enum):
     ILYA_EMELYANOV = ('30c91c19-e69f-4de9-92a1-7da68aec71af', 'Ilya Emelyanov')
     TEST_USER = ('795d4839-3e99-4b76-b35c-e70f80ab856c', '')
 
-with open('settings.json', 'rb') as PFile:
-    settings_url = json.loads(PFile.read().decode('utf-8'))['urlOneVizion']  
-
 BLNK_CR_127_REVIEW_JSON_DATA = {'reviewId':{'projectId':'blank','reviewId':Review.BLNK_CR_127.review_key},
                                 'title':f'{Issue.DEPL_125306.issue_id} {Issue.DEPL_125306.summary}',
-                                'description':f'[{Issue.DEPL_125306.issue_id}-64]({settings_url}trackor_types/Issue_Task/trackors.do?key={Issue.DEPL_125306.issue_id}-64) amoiseenko\n \
-                                                [{Issue.DEPL_125306.issue_id}-62]({settings_url}trackor_types/Issue_Task/trackors.do?key={Issue.DEPL_125306.issue_id}-62) vadim.glebov',
+                                'description':f'[{Issue.DEPL_125306.issue_id}-64](settings_url/trackor_types/Issue_Task/trackors.do?key={Issue.DEPL_125306.issue_id}-64) amoiseenko\n \
+                                                [{Issue.DEPL_125306.issue_id}-62](settings_url/trackor_types/Issue_Task/trackors.do?key={Issue.DEPL_125306.issue_id}-62) vadim.glebov',
                                 'participants':[{'userId':User.ILYA_EMELYANOV.user_id,'role':2,'state':2},
                                                 {'userId':User.ASMOISEENKO.user_id,'role':2,'state':2},
                                                 {'userId':User.VADIM.user_id,'role':2,'state':2},
