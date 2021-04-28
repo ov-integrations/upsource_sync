@@ -6,6 +6,7 @@ import re
 
 
 app = Flask(__name__)
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 
 def auth_required(f):
     @wraps(f) 
