@@ -6,10 +6,8 @@ import re
 
 
 app = Flask(__name__)
-print(app.config)
-app.config['SESSION_COOKIE_HTTPONLY'] = False
-app.config['REMEMBER_COOKIE_HTTPONLY'] = False
-print(app.config)
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+
 def auth_required(f):
     @wraps(f) 
     def decorated(*args, **kwargs):
