@@ -6,7 +6,6 @@ import re
 
 
 app = Flask(__name__)
-app.config['SESSION_COOKIE_HTTPONLY'] = False
 
 def auth_required(f):
     @wraps(f) 
