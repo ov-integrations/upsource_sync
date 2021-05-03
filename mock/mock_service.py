@@ -1,29 +1,24 @@
 from flask import Flask, request, make_response
-from functools import wraps
+from flask_httpauth import HTTPTokenAuth
 from constants import *
 import json
 import re
 
 
 app = Flask(__name__)
+with open('settings.json', "rb") as PFile:
+    password_data = json.loads(PFile.read().decode('utf-8'))
 
-def auth_required(f):
-    @wraps(f) 
-    def decorated(*args, **kwargs):
-        auth = request.authorization
-        with open('settings.json', 'rb') as PFile:
-            password_data = json.loads(PFile.read().decode('utf-8'))
+app.config['SECRET_KEY'] = password_data['tokenUpsource']
+auth = HTTPTokenAuth('Bearer')
 
-        if auth.username == password_data['loginUpsource'] \
-            and auth.password == password_data['passUpsource']:
-            return f(*args, **kwargs)
-
-        return make_response('Authentication failed', StatusCode.UNAUTHORIZED.value)
-
-    return decorated
+@auth.verify_token
+def verify_token(token):
+    if token == app.config['SECRET_KEY']:
+        return token
 
 @app.route('/~rpc/getRevisionsListFiltered',  methods=['POST'])
-@auth_required
+@auth.login_required
 def get_filtered_revision_list():
     query = request.get_json()['query']
 
@@ -42,7 +37,7 @@ def get_filtered_revision_list():
     return json_data
 
 @app.route('/~rpc/closeReview',  methods=['POST'])
-@auth_required
+@auth.login_required
 def close_review():
     review_id = request.get_json()['reviewId']['reviewId']
 
@@ -52,7 +47,7 @@ def close_review():
     return review_id
 
 @app.route('/~rpc/getBranches',  methods=['POST'])
-@auth_required
+@auth.login_required
 def get_branch():
     query = request.get_json()['query']
 
@@ -66,7 +61,7 @@ def get_branch():
     return json_data
 
 @app.route('/~rpc/startBranchTracking',  methods=['POST'])
-@auth_required
+@auth.login_required
 def start_branch_tracking():
     review_id = request.get_json()['reviewId']['reviewId']
 
@@ -76,7 +71,7 @@ def start_branch_tracking():
     return review_id
 
 @app.route('/~rpc/findUsers',  methods=['POST'])
-@auth_required
+@auth.login_required
 def find_users():
     pattern = request.get_json()['pattern']
 
@@ -92,7 +87,7 @@ def find_users():
     return json_data
 
 @app.route('/~rpc/updateParticipantInReview',  methods=['POST'])
-@auth_required
+@auth.login_required
 def update_participant_status():
     review_id = request.get_json()['reviewId']['reviewId']
     user_id = request.get_json()['userId']
@@ -106,7 +101,7 @@ def update_participant_status():
     return user_id
 
 @app.route('/~rpc/addParticipantToReview',  methods=['POST'])
-@auth_required
+@auth.login_required
 def add_reviewer():
     review_id = request.get_json()['reviewId']['reviewId']
     user_id = request.get_json()['participant']['userId']
@@ -120,7 +115,7 @@ def add_reviewer():
     return user_id
 
 @app.route('/~rpc/removeParticipantFromReview',  methods=['POST'])
-@auth_required
+@auth.login_required
 def remove_reviewer():
     review_id = request.get_json()['reviewId']['reviewId']
     user_id = request.get_json()['participant']['userId']
@@ -134,7 +129,7 @@ def remove_reviewer():
     return user_id
 
 @app.route('/~rpc/getReviews',  methods=['POST'])
-@auth_required
+@auth.login_required
 def get_reviews():
     query = request.get_json()['query']
 
@@ -160,7 +155,7 @@ def get_reviews():
     return json_data
 
 @app.route('/~rpc/renameReview',  methods=['POST'])
-@auth_required
+@auth.login_required
 def rename_review():
     review_id = request.get_json()['reviewId']['reviewId']
 
@@ -170,7 +165,7 @@ def rename_review():
     return review_id
 
 @app.route('/~rpc/createReview',  methods=['POST'])
-@auth_required
+@auth.login_required
 def create_review():
     revisions = request.get_json()['revisions']
 
@@ -185,7 +180,7 @@ def create_review():
     return json_data
 
 @app.route('/~rpc/editReviewDescription',  methods=['POST'])
-@auth_required
+@auth.login_required
 def update_review_description():
     review_id = request.get_json()['reviewId']['reviewId']
 
