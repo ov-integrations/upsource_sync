@@ -1,11 +1,14 @@
 from flask import Flask, request, make_response
 from flask_httpauth import HTTPTokenAuth
+from flask_wtf.csrf import CSRFProtect
 from constants import *
 import json
 import re
 
 
 app = Flask(__name__)
+csrf = CSRFProtect()
+csrf.init_app(app)
 with open('settings.json', "rb") as PFile:
     password_data = json.loads(PFile.read().decode('utf-8'))
 
