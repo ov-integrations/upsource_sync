@@ -1,10 +1,8 @@
+from enum import Enum
 import json
 import re
-from enum import Enum
-
 import onevizion
 import requests
-from requests.auth import HTTPBasicAuth
 
 
 class Integration:
@@ -42,8 +40,11 @@ class Integration:
         for reviewer in self.review.reviewers:
             try:
                 upsource_user = self.review.find_user_in_upsource(reviewer['name'], project_upsource)
-            except Exception:
-                upsource_user = None
+            except Exception as e:
+                if re.search(f'{StatusCode.UNAUTHORIZED.value}|{StatusCode.EXCEPTION.value}', str(e)) is None:
+                    upsource_user = None
+                else:
+                    raise Exception(f'Failed to get_reviewers - {reviewer["name"]}. Exception [{re.split("-", str(e))[1]}]')
 
             if upsource_user is not None and 'infos' in upsource_user:
                 reviewer_id = upsource_user['infos'][0]['userId']
@@ -74,7 +75,11 @@ class Integration:
         self.log.info(f'Finding a revision for {str(issue_title)} Issue')
 
         revision_id = None
-        revision_list = self.review.get_filtered_revision_list(issue_title, project_upsource)
+        try:
+            revision_list = self.review.get_filtered_revision_list(issue_title, project_upsource)
+        except Exception as e:
+            raise Exception(f'Failed to filtered_revision_list. Exception [{e}]')
+
         if revision_list is not None and 'revision' in revision_list:
             for revision in revision_list['revision']:
                 if re.search('^Merge', revision['revisionCommitMessage']) is None:
@@ -89,15 +94,27 @@ class Integration:
 
     def create_review(self, revision_id, issue_id, issue_title, issue_summary, project_upsource):
         self.log.info(f'Creating a review for {str(issue_title)} Issue')
-        review = self.review.create(revision_id, project_upsource)
+        try:
+            review = self.review.create(revision_id, project_upsource)
+        except Exception as e:
+            raise Exception(f'Failed to create_review. Exception [{e}]')
+
         if len(review) > 0 and 'reviewId' in review:
             review_id = review['reviewId']['reviewId']
             self.issue.update_code_review_url(issue_id, self.review.get_review_url(review_id, project_upsource))
             review_title = f'{str(issue_title)} {str(issue_summary)}'
-            self.review.rename(review_id, review_title, project_upsource)
+
+            try:
+                self.review.rename(review_id, review_title, project_upsource)
+            except Exception as e:
+                raise Exception(f'Failed to rename_review. Exception [{e}]')
+
             self.set_branch_tracking(issue_title, review_id, project_upsource)
             if self.upsource_user_id is not None:
-                self.review.delete_default_reviewer(self.upsource_user_id, review_id, ParticipantRole.REVIEWER.value, project_upsource)
+                try:
+                    self.review.delete_default_reviewer(self.upsource_user_id, review_id, ParticipantRole.REVIEWER.value, project_upsource)
+                except Exception as e:
+                    raise Exception(f'Failed to delete_default_reviewer. Exception [{e}]')
 
             self.log.info(f'Review for {str(issue_title)} created')
 
@@ -105,12 +122,17 @@ class Integration:
         try:
             branch_in_review = self.review.get_branch(issue_title, project_upsource)
         except Exception as e:
-            self.log.warning(f'Failed to get_branch. Exception [{str(e)}]')
-            branch_in_review = None
+            if re.search(StatusCode.EXCEPTION.value, str(e)) is None:
+                branch_in_review = None
+            else:
+                raise Exception(f'Failed to get_branch. Exception [{re.split("-", str(e))[1]}]')
 
         if branch_in_review is not None and 'branch' in branch_in_review:
             branch = branch_in_review['branch'][0]['name']
-            self.review.start_branch_tracking(branch, review_id, project_upsource)
+            try:
+                self.review.start_branch_tracking(branch, review_id, project_upsource)
+            except Exception as e:
+                raise Exception(f'Failed to start_branch_tracking. Exception [{e}]')
 
     def check_open_reviews(self, project_upsource):
         review_list = self.review.get_list_on_query('state: open', project_upsource)
@@ -141,8 +163,10 @@ class Integration:
                         try:
                             closed_review = self.review.close(review_id, project_upsource)
                         except Exception as e:
-                            self.log.warning(f'Failed to close review. Exception [{str(e)}]')
-                            closed_review = None
+                            if re.search(StatusCode.EXCEPTION.value, e) is None:
+                                closed_review = None
+                            else:
+                                raise Exception(f'Failed to close review. Exception [{re.split("-", e)[1]}]')
 
                         if closed_review is not None:
                             self.log.debug(f'Review {str(review_id)} closed for Issue {issue_title}')
@@ -156,7 +180,10 @@ class Integration:
     def replace_non_breaking_space(self, review_id, review_title, project_upsource):
         if re.search('\xa0', review_title) is not None:
             review_title = review_title.replace('\xa0', ' ')
-            self.review.rename(review_id, review_title, project_upsource)
+            try:
+                self.review.rename(review_id, review_title, project_upsource)
+            except Exception as e:
+                raise Exception(f'Failed to rename_review. Exception [{e}]')
 
         return review_title
 
@@ -229,7 +256,10 @@ class Integration:
                     new_review_description = f'[{issue_task_key}]({issue_task_url}{issue_task_key}) {issue_task_code_reviewer}\n{new_review_description}'
 
         if review_description != new_review_description:
-            self.review.update_review_description(review_id, new_review_description, project_upsource)
+            try:
+                self.review.update_review_description(review_id, new_review_description, project_upsource)
+            except Exception as e:
+                raise Exception(f'Failed to update_review_description. Exception [{e}]')
 
     def find_riviewers(self, review_data, state):
         reviewers_list = []
@@ -261,7 +291,10 @@ class Integration:
                                 break
 
                         if is_reviewer_deleted:
-                            self.review.remove_reviewer(reviewer, review_id, project_upsource)
+                            try:
+                                self.review.remove_reviewer(reviewer, review_id, project_upsource)
+                            except Exception as e:
+                                raise Exception(f'Failed to remove reviewer {str(reviewer[ReviewerField.OV_NAME.value])} to {str(review_id)} review. Exception [{e}]')
 
                         break
 
@@ -277,8 +310,11 @@ class Integration:
                         and issue_task_status != self.issue_task.issue_task_statuses.CANCELED:
                     for reviewer in self.reviewers:
                         if reviewer[ReviewerField.OV_NAME.value] in issue_task_code_reviewer and reviewer[ReviewerField.ID.value] not in reviewers_list:
-                            self.review.add_reviewer(reviewer, review_id, project_upsource)
-                            reviewers_list.append(reviewer[ReviewerField.ID.value])
+                            try:
+                                self.review.add_reviewer(reviewer, review_id, project_upsource)
+                                reviewers_list.append(reviewer[ReviewerField.ID.value])
+                            except Exception as e:
+                                raise Exception(f'Failed to add reviewer {str(reviewer[ReviewerField.OV_NAME.value])} to {str(review_id)} review. Exception [{e}]')
                             break
 
     def update_participant_status_for_review(self, review_id, issue_title, project_upsource):
@@ -467,54 +503,63 @@ class IssueTaskStatuses:
 class Review:
     LIMIT = 100
 
-    def __init__(self, url_upsource, user_name_upsource, login_upsource, pass_upsource, reviewers,
-                 logger):
+    def __init__(self, url_upsource, user_name_upsource, token_upsource, reviewers, logger):
         self.url_upsource = url_upsource
         self.user_name_upsource = user_name_upsource
-        self.auth_upsource = HTTPBasicAuth(login_upsource, pass_upsource)
         self.reviewers = reviewers
-        self.headers = {'Content-type': 'application/json', 'Content-Encoding': 'utf-8'}
+        self.headers = {'Content-type': 'application/json', 'Content-Encoding': 'utf-8', 'Authorization': f'Bearer {token_upsource}'}
         self.log = logger
 
     def get_filtered_revision_list(self, issue_title, project_upsource):
         url = f'{self.url_upsource}~rpc/getRevisionsListFiltered'
         data = {"projectId": project_upsource, "limit": Review.LIMIT, "query": issue_title}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok:
             return answer.json()['result']
         else:
-            self.log.warning(f'Failed to filtered_revision_list. Exception [{str(answer.text)}]')
+            self.log.warning(f'Failed to filtered_revision_list. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(answer.text)
+
             return None
 
     def close(self, review_id, project_upsource):
         url = f'{self.url_upsource}~rpc/closeReview'
         data = {"reviewId": {"projectId": project_upsource, "reviewId": review_id}, "isFlagged": True}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok:
             return answer
         else:
-            raise Exception(answer.text)
+            self.log.warning(f'Failed to close review. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(f'{answer.status_code}-{answer.text}')
+            raise Exception(f'Failed to close review. Exception [{answer.text}]')
 
     def get_branch(self, issue_title, project_upsource):
         url = f'{self.url_upsource}~rpc/getBranches'
         data = {"projectId": project_upsource, "limit": Review.LIMIT, "query": issue_title}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok:
             return answer.json()['result']
         else:
-            raise Exception(answer.text)
+            self.log.warning(f'Failed to get_branch. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(f'{answer.status_code}-{answer.text}')
+            raise Exception(f'Failed to get_branch. Exception [{answer.text}]')
 
     def start_branch_tracking(self, branch, review_id, project_upsource):
         url = f'{self.url_upsource}~rpc/startBranchTracking'
         data = {"reviewId": {"projectId": project_upsource, "reviewId": review_id}, "branch": branch}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok == False:
-            self.log.warning(f'Failed to start_branch_tracking. Exception [{str(answer.text)}]')
+            self.log.warning(f'Failed to start_branch_tracking. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(answer.text)
 
     def find_user_in_upsource(self, reviewer_name, project_upsource):
         url = f'{self.url_upsource}~rpc/findUsers'
         data = {'projectId': project_upsource, 'pattern': reviewer_name, 'limit': Review.LIMIT}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok:
             result = answer.json()['result']
             if len(result) > 0:
@@ -522,14 +567,14 @@ class Review:
             else:
                 raise Exception(answer.text)
         else:
-            raise Exception(answer.text)
+            raise Exception(f'{answer.status_code}-{answer.text}')
 
     def get_upsource_user_id(self, project_upsource):
         try:
             upsource_user = self.find_user_in_upsource(self.user_name_upsource, project_upsource)
         except Exception as e:
-            self.log.error(f'Failed to get_upsource_user_id - {self.user_name_upsource}. Exception [{str(e)}]')
-            raise Exception(f'Failed to get_upsource_user_id - {self.user_name_upsource}') from e
+            self.log.error(f'Failed to get_upsource_user_id - {self.user_name_upsource}. Exception [{e}]')
+            raise Exception(f'Failed to get_upsource_user_id - {self.user_name_upsource}. Exception [{e}]')
 
         if upsource_user is not None and 'infos' in upsource_user:
             return upsource_user['infos'][0]['userId']
@@ -537,72 +582,102 @@ class Review:
             raise Exception(f'Failed to get_upsource_user_id - {self.user_name_upsource}')
 
     def update_participant_status(self, reviewer, state, review_id, project_upsource):
+        try:
+            self.update_participant_in_review(reviewer, state, review_id, project_upsource)
+        except Exception as e:
+            raise Exception(f'Failed to update_participant_status for reviewer {str(reviewer[ReviewerField.OV_NAME.value])} to {str(review_id)} review. Exception [{e}]')
+
+    def update_participant_in_review(self, reviewer, state, review_id, project_upsource):
         url = f'{self.url_upsource}~rpc/updateParticipantInReview'
         data = {"reviewId": {"projectId": project_upsource, "reviewId": review_id}, "state": state,
                 "userId": reviewer[ReviewerField.ID.value]}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok:
             self.log.info(f'Status for reviewer {str(reviewer[ReviewerField.OV_NAME.value])} has been changed to {state}')
         else:
-            self.log.warning(f'Failed to update_participant_status for reviewer {str(reviewer[ReviewerField.OV_NAME.value])} to {str(review_id)} review. Exception [{str(answer.text)}]')
+            self.log.warning(f'Failed to update_participant_status for reviewer {str(reviewer[ReviewerField.OV_NAME.value])} to {str(review_id)} review. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(answer.text)
 
     def add_reviewer(self, reviewer, review_id, project_upsource):
         url = f'{self.url_upsource}~rpc/addParticipantToReview'
         data = {"reviewId": {"projectId": project_upsource, "reviewId": review_id},
                 "participant": {"userId": reviewer[ReviewerField.ID.value], "role": ParticipantRole.REVIEWER.value}}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok:
             self.log.info(f'Reviewer {str(reviewer[ReviewerField.OV_NAME.value])} was added to {str(review_id)} review')
         else:
-            self.log.warning(f'Failed to add reviewer {str(reviewer[ReviewerField.OV_NAME.value])} to {str(review_id)} review. Exception [{str(answer.text)}]')
+            self.log.warning(f'Failed to add reviewer {str(reviewer[ReviewerField.OV_NAME.value])} to {str(review_id)} review. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(answer.text)
 
     def remove_reviewer(self, reviewer, review_id, project_upsource):
         url = f'{self.url_upsource}~rpc/removeParticipantFromReview'
         data = {"reviewId": {"projectId": project_upsource, "reviewId": review_id},
                 "participant": {"userId": reviewer[ReviewerField.ID.value], "role": ParticipantRole.REVIEWER.value}}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok:
             self.log.info(f'Reviewer {str(reviewer[ReviewerField.OV_NAME.value])} removed from {str(review_id)} review')
         else:
-            self.log.warning(f'Failed to remove reviewer {str(reviewer[ReviewerField.OV_NAME.value])} to {str(review_id)} review. Exception [{str(answer.text)}]')
+            self.log.warning(f'Failed to remove reviewer {str(reviewer[ReviewerField.OV_NAME.value])} to {str(review_id)} review. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(answer.text)
 
     def get_list_on_query(self, query, project_upsource):
+        try:
+            review_data = self.get_reviews(query, project_upsource)
+        except Exception as e:
+            raise Exception(f'Failed to get_reviews. Exception [{e}]')
+
+        return review_data
+
+    def get_reviews(self, query, project_upsource):
         url = f'{self.url_upsource}~rpc/getReviews'
         data = {"projectId": project_upsource, "limit": Review.LIMIT, "query": query}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok:
             if 'reviews' in answer.json()['result']:
                 return answer.json()['result']['reviews']
             else:
                 return answer.json()
         else:
-            self.log.warning(f'Failed to get_reviews. Exception [{str(answer.text)}]')
+            self.log.warning(f'Failed to get_reviews. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(answer.text)
+
             return None
 
     def delete_default_reviewer(self, user_id, review_id, role_in_review, project_upsource):
         url = f'{self.url_upsource}~rpc/removeParticipantFromReview'
         data = {"reviewId": {"projectId": project_upsource, "reviewId": review_id},
                 "participant": {"userId": user_id, "role": role_in_review}}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok == False:
-            self.log.warning(f'Failed to delete_default_reviewer. Exception [{str(answer.text)}]')
+            self.log.warning(f'Failed to delete_default_reviewer. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(answer.text)
 
     def rename(self, review_id, title, project_upsource):
         url = f'{self.url_upsource}~rpc/renameReview'
         data = {"reviewId": {"projectId": project_upsource, "reviewId": review_id},
                 "text": title}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok == False:
-            self.log.warning(f'Failed to rename_review. Exception [{str(answer.text)}]')
+            self.log.warning(f'Failed to rename_review. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(answer.text)
 
     def create(self, revision_id, project_upsource):
         url = f'{self.url_upsource}~rpc/createReview'
         data = {"projectId": project_upsource, "revisions": revision_id}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok:
             return answer.json()['result']
         else:
-            self.log.warning(f'Failed to create_review. Exception [{str(answer.text)}]')
+            self.log.warning(f'Failed to create_review. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(answer.text)
+
             return None
 
     def get_review_url(self, review_id, project_upsource):
@@ -612,9 +687,11 @@ class Review:
         url = f'{self.url_upsource}~rpc/editReviewDescription'
         data = {"reviewId": {"projectId": project_upsource, "reviewId": review_id},
                 "text": description}
-        answer = requests.post(url, headers=self.headers, data=json.dumps(data), auth=self.auth_upsource)
+        answer = requests.post(url, headers=self.headers, data=json.dumps(data))
         if answer.ok == False:
-            self.log.warning(f'Failed to update_review_description. Exception [{str(answer.text)}]')
+            self.log.warning(f'Failed to update_review_description. Exception [{answer.text}]')
+            if answer.status_code == StatusCode.EXCEPTION.value:
+                raise Exception(answer.text)
 
 
 class IssueStatus(Enum):
@@ -675,3 +752,8 @@ class ParticipantState(Enum):
 
 class ParticipantRole(Enum):
     REVIEWER = 2
+
+
+class StatusCode(Enum):
+    UNAUTHORIZED = 401
+    EXCEPTION = 555

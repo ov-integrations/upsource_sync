@@ -16,8 +16,7 @@ except Exception as e:
 
 url_upsource = password_data["urlUpsource"]
 user_name_upsource = password_data["userNameUpsource"]
-login_upsource = password_data["loginUpsource"]
-pass_upsource = password_data["passUpsource"]
+token_upsource = password_data["tokenUpsource"]
 products = password_data["products"]
 reviewers = password_data["reviewers"]
 
@@ -43,8 +42,7 @@ issue = Issue(url_onevizion_without_protocol, login_onevizion, pass_onevizion,
               issue_trackor_type, issue_statuses, issue_fields)
 issue_task = IssueTask(url_onevizion_without_protocol, login_onevizion, pass_onevizion, issue_trackor_type, issue_task_trackor_type,
                        issue_fields, issue_task_fields, issue_task_types, issue_task_statuses)
-review = Review(url_upsource, user_name_upsource,
-                login_upsource, pass_upsource, reviewers, logger)
+review = Review(url_upsource, user_name_upsource, token_upsource, reviewers, logger)
 integration = Integration(url_onevizion, products, issue, issue_task, review, logger)
 
 integration.start_integration()
