@@ -1,23 +1,20 @@
 from flask import Flask, request, make_response
 from flask_httpauth import HTTPTokenAuth
-from flask_wtf.csrf import CSRFProtect
 from constants import *
 import json
 import re
 
 
 app = Flask(__name__)
-csrf = CSRFProtect()
-csrf.init_app(app)
 with open('settings.json', "rb") as PFile:
     password_data = json.loads(PFile.read().decode('utf-8'))
 
-app.config['SECRET_KEY'] = password_data['tokenUpsource']
+app.secret_key = password_data['tokenUpsource']
 auth = HTTPTokenAuth('Bearer')
 
 @auth.verify_token
 def verify_token(token):
-    if token == app.config['SECRET_KEY']:
+    if token == app.secret_key:
         return token
 
 @app.route('/~rpc/getRevisionsListFiltered',  methods=['POST'])
